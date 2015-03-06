@@ -18,17 +18,10 @@ else:
     forking_enable = lambda _: _ #dummy fn
 
 if getattr(sys, 'frozen', False):
-    if platform.system() == 'Darwin':
-        user_dir = os.path.expanduser('~/Desktop/pupil_capture_settings')
-        rec_dir = os.path.expanduser('~/Desktop/pupil_recordings')
-        version_file = os.path.join(sys._MEIPASS,'_version_string_')
-    else:
-        # Specifiy user dirs.
-        user_dir = os.path.expanduser("~/pupil_capture_settings")
-        rec_dir = os.path.expanduser("~/pupil_recordings")
-        version_file = os.path.join(sys._MEIPASS,'_version_string_')
-
-
+    # Specifiy user dirs.
+    user_dir = os.path.expanduser("~/pupil_capture_settings")
+    rec_dir = os.path.expanduser("~/pupil_recordings")
+    version_file = os.path.join(sys._MEIPASS,'_version_string_')
 else:
     # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
@@ -92,8 +85,8 @@ if getattr(sys, 'frozen', False):
     with open(version_file) as f:
         version = f.read()
 else:
-    from git_version import get_tag_commit
-    version = get_tag_commit()
+    from git_version import pupil_version
+    version = pupil_version()
 
 class Global_Container(object):
     pass
