@@ -130,6 +130,11 @@ class Offline_Marker_Detector(Plugin):
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
+        
+        # filter to be applyed to all surface heatmaps
+        self.menu.append(ui.Info_Text('Filters'))
+        self.menu.append(ui.Switch('filter_blur', self, label='Blur'))
+        self.menu.append(ui.Slider('filter_blur_detail',self,min=0.01,step=0.01,max=1.0,label='Blur Gradation'))
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
@@ -138,6 +143,9 @@ class Offline_Marker_Detector(Plugin):
             #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
             s_menu.append(ui.Text_Input('x',s.real_world_size,'x_scale'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,'y_scale'))
+            # heatmap intervals
+            s_menu.append(ui.Text_Input('x',s.heatmap_bins, label='X bin'))
+            s_menu.append(ui.Text_Input('y',s.heatmap_bins, label='Y bin'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
@@ -193,6 +201,8 @@ class Offline_Marker_Detector(Plugin):
         # calc heatmaps
         for s in self.surfaces:
             if s.defined:
+                s.filter_blur = self.filter_blur
+                s.heatmap_detail = self.filter_blur_detail
                 s.generate_heatmap(section)
 
         # calc metrics:
