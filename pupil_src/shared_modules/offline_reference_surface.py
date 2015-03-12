@@ -34,7 +34,8 @@ class Offline_Reference_Surface(Reference_Surface):
         self.gaze_positions_by_frame = gaze_positions_by_frame
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
-
+        self.heatmap_bins = {'x':1,'y':1}
+        self.filter_blur = False
         self.heatmap_detail = .2
         self.heatmap = None
         self.heatmap_texture = None
