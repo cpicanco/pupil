@@ -239,7 +239,7 @@ class Offline_Reference_Surface(Reference_Surface):
         if self.cache is None:
             logger.warning('Surface cache is not build yet.')
             return
-
+            
         # removing encapsulation
         x_bin, y_bin = self.heatmap_bins['x'], self.heatmap_bins['y']
         x_size, y_size = self.real_world_size['x'], self.real_world_size['y']
