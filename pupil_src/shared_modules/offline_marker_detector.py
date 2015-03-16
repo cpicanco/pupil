@@ -142,8 +142,10 @@ class Offline_Marker_Detector(Plugin):
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
             #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
-            s_menu.append(ui.Text_Input('x',s.real_world_size,'x_scale'))
-            s_menu.append(ui.Text_Input('y',s.real_world_size,'y_scale'))
+            s_menu.append(ui.Info_Text('You can estimate the surface size based on the its pixels on screen. It can help you to give a proper scale to the on screen data. It requires that you seek to a frame with the camera angle at 90 degrees from the surface. Then choose "Edit surface", click on the "Estimate Size" button. Check the result with the "recalculate" button'))
+            s_menu.append(ui.Button('Estimate Size', s.estimate_size))
+            s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size', getter=s.estimate_x_size))
+            s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size', getter=s.estimate_y_size))
             # heatmap intervals
             s_menu.append(ui.Text_Input('x',s.heatmap_bins, label='X bin'))
             s_menu.append(ui.Text_Input('y',s.heatmap_bins, label='Y bin'))
@@ -234,8 +236,6 @@ class Offline_Marker_Detector(Plugin):
             update_named_texture(s.metrics_texture,heatmap)
 
 
-
-
     def update(self,frame,events):
         recent_pupil_positions = events['pupil_positions']
         self.img = frame.img
@@ -250,6 +250,7 @@ class Offline_Marker_Detector(Plugin):
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
                 s.locate(self.markers)
+                s.img_shape = self.img_shape
             if s.detected:
                 pass
                 # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
