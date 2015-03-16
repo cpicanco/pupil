@@ -7,14 +7,14 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import math
 import numpy as np
 import cv2
 from gl_utils import cvmat_to_glmat,clear_gl_screen
 from glfw import *
 from OpenGL.GL import *
 from pyglui.cygl.utils import create_named_texture,update_named_texture, draw_named_texture, draw_points_norm, RGBA
-from methods import GetAnglesPolyline,normalize
+from methods import GetAnglesPolyline, normalize, denormalize
 from cache_list import Cache_List
 
 #ctypes import for atb_vars:
@@ -34,6 +34,8 @@ class Offline_Reference_Surface(Reference_Surface):
         self.gaze_positions_by_frame = gaze_positions_by_frame
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
+        self.x_dist = 1
+        self.y_dist = 1
         self.heatmap_bins = {'x':1,'y':1}
         self.filter_blur = False
         self.heatmap_detail = .2
@@ -234,7 +236,45 @@ class Offline_Reference_Surface(Reference_Surface):
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
 
+    def get_surface_vertices(self):
+        """
+            Returns 4 denormalized vertices (vx,vy) and its corresponding indexes (i).
 
+            3 . . 2
+            .     .
+            .     .
+            0 . . 1
+        """
+        if self.detected:
+            denormalized_vertices = []
+            surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
+            for (vx,vy),i in zip(self.ref_surface_to_img(np.array(surf_verts)),range(4)):
+                vx,vy = denormalize((vx,vy),(self.img_shape[1],self.img_shape[0]),flip_y=True)
+                denormalized_vertices.append([(vx,vy),i])
+        return denormalized_vertices
+
+    def estimate_size(self):
+        if self.detected:
+            for (vx, vy), i in self.get_surface_vertices(): 
+                if i == 0: # bottomleft
+                    x0, y0 = vx, vy
+                if i == 1: # bottomright
+                    x1, y1 = vx, vy
+                if i == 3: # topleft
+                    x3, y3 = vx, vy
+
+            self.x_dist = math.hypot(x1 - x0, y1 - y0) 
+            self.y_dist = math.hypot(x3 - x0, y3 - y0) 
+
+            self.estimate_x_size()
+            self.estimate_y_size()
+
+    def estimate_x_size(self):
+        return srt(self.x_dist) 
+
+    def estimate_y_size(self):
+        return srt(self.y_dist) 
+        
     def generate_heatmap(self,section):
         if self.cache is None:
             logger.warning('Surface cache is not build yet.')
