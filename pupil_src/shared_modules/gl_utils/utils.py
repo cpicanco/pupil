@@ -18,7 +18,6 @@ from shader import Shader
 import numpy as np
 
 
-
 __all__ =  ['make_coord_system_norm_based',
             'make_coord_system_pixel_based',
             'draw_gl_texture',
@@ -332,7 +331,7 @@ def draw_named_texture(texture_id, image=None, interpolation=True, quad=((0.,0.)
 def draw_gl_texture(image,interpolation=True):
     """
     We draw the image as a texture on a quad from 0,0 to img.width,img.height.
-    Simple anaymos texture one time use. Look at named texture fn's for better perfomance
+    Simple anonymous texture one time use. Look at named texture fn's for better perfomance
     """
 
 

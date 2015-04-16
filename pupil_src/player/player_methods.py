@@ -113,7 +113,7 @@ def is_pupil_rec_dir(data_dir):
 
 # backwards compatibility tools:
 
-def patch_meta_info(data_dir):
+def patch_meta_info(rec_dir):
     #parse info.csv file
 
     '''
@@ -144,7 +144,7 @@ def patch_meta_info(data_dir):
                     'Release',
                     'Version']
 
-    with open(data_dir + "/info.csv") as info:
+    with open(rec_dir + "/info.csv") as info:
         meta_info = [line.strip().split('\t') for line in info.readlines() ]
 
     for entry in meta_info:
@@ -160,7 +160,7 @@ def patch_meta_info(data_dir):
     for e in meta_info:
         new_info += e[0]+'\t'+e[1]+'\n'
 
-    with open(data_dir + "/info.csv",'w') as info:
+    with open(rec_dir + "/info.csv",'w') as info:
         info.write(new_info)
 
 def convert_gaze_pos(gaze_list,capture_version):
@@ -194,4 +194,21 @@ def transparent_circle(img,center,radius,color,thickness):
     except:
         logger.debug("transparent_circle would have been partially outsize of img. Did not draw it.")
 
+
+def transparent_image_overlay(pos,overlay_img,img,alpha):
+    """
+    Overlay one image with another with alpha blending
+    In player this will be used to overlay the eye (as overlay_img) over the world image (img)
+    Arguments:
+        pos: (x,y) position of the top left corner in numpy row,column format from top left corner (numpy coord system)
+        overlay_img: image to overlay
+        img: destination image 
+        alpha: 0.0-1.0    
+    """
+    roi = slice(pos[1],pos[1]+overlay_img.shape[0]),slice(pos[0],pos[0]+overlay_img.shape[1])
+    try:
+        cv2.addWeighted(overlay_img,alpha,img[roi],1.-alpha,0,img[roi])
+    except:
+        logger.debug("transparent_image_overlay was outside of the world image and was not drawn")
+    pass
 

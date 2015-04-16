@@ -28,7 +28,7 @@ if platform.system() == 'Darwin':
                    a.zipfiles,
                    a.datas,
                    [('methods.so', '../pupil_src/shared_modules/c_methods/methods.so','BINARY')],
-                   [('uvcc.so', '../pupil_src/shared_modules/uvc_capture/mac_video/uvcc.so','BINARY')],
+                   [('uvcc.so', '../pupil_src/shared_modules/video_capture/mac_video/uvcc.so','BINARY')],
                    [('libglfw3.dylib', '/usr/local/Cellar/glfw3/3.0.2/lib/libglfw3.dylib','BINARY')],
                    [('OpenSans-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/OpenSans-Regular.ttf','DATA')],
                    [('Roboto-Regular.ttf','/usr/local/lib/python2.7/site-packages/pyglui/Roboto-Regular.ttf','DATA')],
@@ -83,7 +83,7 @@ elif platform.system() == 'Windows':
 			python_path = os.path.abspath(os.path.join(path, os.path.pardir))
 		elif path.endswith("site-packages"):
 			package_path = path
-	
+
 	scipy_imports = ['scipy.integrate']
 	#scipy_imports += ['scipy.integrate._ode', 'scipy.integrate.quadrature', 'scipy.integrate.odepack', 'scipy.integrate._odepack', 'scipy.integrate.quadpack', 'scipy.integrate._quadpack']
 	#scipy_imports += ['scipy.integrate.vode', 'scipy.integrate.lsoda', 'scipy.integrate._dop', 'scipy.special._ufuncs_cxx']
@@ -113,6 +113,7 @@ elif platform.system() == 'Windows':
 	               [('glfw3.dll', '../pupil_src/shared_modules/external/glfw3.dll','BINARY')],
 	               [('glfw3.lib', '../pupil_src/shared_modules/external/glfw3.lib','BINARY')],
 	               [('glfw3dll.lib', '../pupil_src/shared_modules/external/glfw3dll.lib','BINARY')],
+	               [('opencv_ffmpeg248_64.dll', os.path.join(python_path, 'opencv_ffmpeg248_64.dll'),'BINARY')],
 	               [('_videoInput.lib', os.path.join(python_path, '_videoInput.lib'),'BINARY')],
 	               [('msvcp110.dll', os.path.join(system_path, 'msvcp110.dll'),'BINARY')],
 	               [('msvcr110.dll', os.path.join(system_path, 'msvcr110.dll'),'BINARY')],
@@ -121,5 +122,5 @@ elif platform.system() == 'Windows':
 	               strip=None,
 	               upx=True,
 	               name='Pupil Capture')
-		
+
 

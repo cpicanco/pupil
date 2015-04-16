@@ -21,7 +21,6 @@ except:
 if getattr(sys, 'frozen', False):
     user_dir = os.path.expanduser('~/pupil_player_settings')
     version_file = os.path.join(sys._MEIPASS,'_version_string_')
-
 else:
     # We are running in a normal Python environment.
     # Make all pupil shared_modules available to this Python session.
@@ -29,6 +28,7 @@ else:
     sys.path.append(os.path.join(pupil_base_dir, 'pupil_src', 'shared_modules'))
     # Specifiy user dirs.
     user_dir = os.path.join(pupil_base_dir,'player_settings')
+    version_file = None
 
 
 # create folder for user settings, tmp data
@@ -97,10 +97,11 @@ from pyglui.cygl.utils import create_named_texture,update_named_texture,draw_nam
 from gl_utils import basic_gl_setup,adjust_gl_view, clear_gl_screen,make_coord_system_pixel_based,make_coord_system_norm_based
 
 #capture
-from uvc_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
+from video_capture import autoCreateCapture,EndofVideoFileError,FileSeekError,FakeCapture
 
 # helpers/utils
-from methods import normalize, denormalize,Temp
+from version_utils import VersionFormat, read_rec_version, get_version
+from methods import normalize, denormalize
 from player_methods import correlate_gaze,correlate_gaze_legacy, patch_meta_info, is_pupil_rec_dir
 
 #monitoring
@@ -113,6 +114,7 @@ from vis_cross import Vis_Cross
 from vis_polyline import Vis_Polyline
 from display_gaze import Display_Gaze
 from vis_light_points import Vis_Light_Points
+from vis_watermark import Vis_Watermark
 from seek_bar import Seek_Bar
 from trim_marks import Trim_Marks
 from export_launcher import Export_Launcher
@@ -122,24 +124,19 @@ from marker_auto_trim_marks import Marker_Auto_Trim_Marks
 from pupil_server import Pupil_Server
 from filter_fixations import Filter_Fixations
 from manual_gaze_correction import Manual_Gaze_Correction
+from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
+from eye_video_overlay import Eye_Video_Overlay
 
 system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Manual_Gaze_Correction,Offline_Marker_Detector,Pupil_Server,Batch_Exporter #,Marker_Auto_Trim_Marks
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
 
-#get the current software version
-if getattr(sys, 'frozen', False):
-    with open(version_file) as f:
-        version = f.read()
-else:
-    from git_version import get_tag_commit
-    version = get_tag_commit()
-
-
+class Global_Container(object):
+    pass
 
 def main():
 
@@ -167,7 +164,7 @@ def main():
     def on_button(window,button, action, mods):
         g_pool.gui.update_button(button,action,mods)
         pos = glfwGetCursorPos(window)
-        pos = normalize(pos,glfwGetWindowSize(main_window))
+        pos = normalize(pos,glfwGetWindowSize(window))
         pos = denormalize(pos,(frame.img.shape[1],frame.img.shape[0]) ) # Position in img pixels
         for p in g_pool.plugins:
             p.on_click(pos,button,action)
@@ -206,19 +203,20 @@ def main():
         logger.error("You did not supply a dir with the required files inside.")
         return
 
+    # load session persistent settings
+    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
+
     #backwards compatibility fn.
     patch_meta_info(rec_dir)
 
-    meta_info_path = rec_dir + "/info.csv"
-
     #parse info.csv file
+    meta_info_path = rec_dir + "/info.csv"
     with open(meta_info_path) as info:
         meta_info = dict( ((line.strip().split('\t')) for line in info.readlines() ) )
-    rec_version = meta_info["Capture Software Version"]
-    rec_version_float = int(filter(type(rec_version).isdigit, rec_version)[:3])/100. #(get major,minor,fix of version)
-    logger.debug("Recording version: %s , %s"%(rec_version,rec_version_float))
 
-    if rec_version_float < 0.4:
+
+    rec_version = read_rec_version(meta_info)
+    if rec_version < VersionFormat('0.4'):
         video_path = rec_dir + "/world.avi"
         timestamps_path = rec_dir + "/timestamps.npy"
     else:
@@ -231,14 +229,10 @@ def main():
     timestamps = np.load(timestamps_path)
 
     #correlate data
-    if rec_version_float < 0.4:
+    if rec_version < VersionFormat('0.4'):
         positions_by_frame = correlate_gaze_legacy(gaze_list,timestamps)
     else:
         positions_by_frame = correlate_gaze(gaze_list,timestamps)
-
-    # load session persistent settings
-    session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
-
 
     # Initialize capture
     cap = autoCreateCapture(video_path,timestamps=timestamps_path)
@@ -247,7 +241,7 @@ def main():
         logger.error("could not start capture.")
         return
 
-    width,height = session_settings.get('window_size',cap.get_size())
+    width,height = session_settings.get('window_size',cap.frame_size)
     window_pos = session_settings.get('window_position',(0,0)) # not yet using this one.
 
 
@@ -269,15 +263,19 @@ def main():
 
 
     # create container for globally scoped vars (within world)
-    g_pool = Temp()
+    g_pool = Global_Container()
+    g_pool.app = 'player'
+    g_pool.version = get_version(version_file)
+    g_pool.capture = cap
+    g_pool.timestamps = timestamps
+    g_pool.gaze_list = gaze_list
+    g_pool.positions_by_frame = positions_by_frame
     g_pool.play = False
     g_pool.new_seek = True
     g_pool.user_dir = user_dir
     g_pool.rec_dir = rec_dir
-    g_pool.app = 'player'
-    g_pool.capture = cap
-    g_pool.timestamps = timestamps
-    g_pool.positions_by_frame = positions_by_frame
+    g_pool.rec_version = rec_version
+    g_pool.meta_info = meta_info
 
 
     def next_frame(_):
@@ -322,14 +320,14 @@ def main():
     g_pool.main_menu.configuration = session_settings.get('main_menu_config',{})
     g_pool.main_menu.append(ui.Slider('scale', setter=set_scale,getter=get_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
 
-    g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%version))
+    g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
 
     g_pool.main_menu.append(ui.Selector('Open plugin', selection = user_launchable_plugins,
                                         labels = [p.__name__.replace('_',' ') for p in user_launchable_plugins],
                                         setter= open_plugin, getter = lambda: "Select to load"))
     g_pool.main_menu.append(ui.Button('Close all plugins',purge_plugins))
-    g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.get_size()[0],cap.get_size()[1])) )
+    g_pool.main_menu.append(ui.Button('Reset window size',lambda: glfwSetWindowSize(main_window,cap.frame_size[0],cap.frame_size[1])) )
 
 
     g_pool.quickbar = ui.Stretching_Menu('Quick Bar',(0,100),(120,-100))
@@ -406,7 +404,7 @@ def main():
 
         frame = new_frame.copy()
         events = {}
-        #new positons and events we make a deepcopy just like the image is a copy.
+        #new positons we make a deepcopy just like the image is a copy.
         events['pupil_positions'] = deepcopy(positions_by_frame[frame.index])
 
         if update_graph:
