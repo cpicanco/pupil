@@ -14,7 +14,6 @@ from plugin import Plugin
 import numpy as np
 import cv2
 
-# TODO: Import pyglui
 from pyglui import ui
 
 from methods import denormalize
@@ -121,5 +120,3 @@ class Filter_Opencv_Threshold(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-

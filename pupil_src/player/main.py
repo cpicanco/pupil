@@ -128,9 +128,19 @@ from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
 
-system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Filter_Fixations,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay #,Marker_Auto_Trim_Marks
-available_plugins = system_plugins + user_launchable_plugins
+from filter_opencv_threshold import Filter_Opencv_Threshold
+from vis_circle_on_contours import Vis_Circle_On_Contours 
+
+system_plugins = Seek_Bar, Trim_Marks
+
+user_plugins = Vis_Circle, Vis_Cross, Vis_Polyline, Vis_Light_Points, Vis_Watermark, Scan_Path
+user_plugins = user_plugins + Filter_Fixations,  Manual_Gaze_Correction, Eye_Video_Overlay
+user_plugins = user_plugins + Show_Calibration, Offline_Marker_Detector, Pupil_Server
+user_plugins = user_plugins + Batch_Exporter, Export_Launcher #,Marker_Auto_Trim_Marks
+
+custom_plugins = Filter_Opencv_Threshold, Vis_Circle_On_Contours
+
+available_plugins = system_plugins + user_launchable_plugins + custom_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
 plugin_by_name = dict(zip(name_by_index,available_plugins))
