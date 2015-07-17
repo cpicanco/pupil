@@ -14,6 +14,8 @@ from scipy.spatial.distance import pdist
 #because np.sqrt is slower when we do it on small arrays
 from math import sqrt
 
+from quad_segmentation import sortCorners
+
 def get_close_markers(markers,centroids=None, min_distance=20):
     if centroids is None:
         centroids = [m['centroid']for m in markers]
