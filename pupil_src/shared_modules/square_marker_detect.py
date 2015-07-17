@@ -117,81 +117,63 @@ def correct_gradient(gray_img,r):
         #px outside of img frame, let the other method check
         return True
 
-
+# hacked to detect a single outmost contour/screen instead
 def detect_markers(gray_img,grid_size,min_marker_perimeter=40,aperture=11,visualize=False):
-    edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, aperture, 9)
+    _ , edges = cv2.threshold(gray_img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
-    contours, hierarchy = cv2.findContours(edges,
+    contours, _ = cv2.findContours(edges,
                                     mode=cv2.RETR_TREE,
                                     method=cv2.CHAIN_APPROX_SIMPLE,offset=(0,0)) #TC89_KCOS
-
-    # remove extra encapsulation
-    hierarchy = hierarchy[0]
     contours = np.array(contours)
-    # keep only contours                        with parents     and      children
-    contained_contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
-    # turn on to debug contours
-    # cv2.drawContours(gray_img, contours,-1, (0,255,255))
-    # cv2.drawContours(gray_img, aprox_contours,-1, (255,0,0))
-
-    # contained_contours = contours #overwrite parent children check
-
-    #filter out rects
-    aprox_contours = [cv2.approxPolyDP(c,epsilon=2.5,closed=True) for c in contained_contours]
-
-    # any rectagle will be made of 4 segemnts in its approximation
-    # also we dont need to find a marker so small that we cannot read it in the end...
-    # also we want all contours to be counter clockwise oriented, we use convex hull fot this:
-    rect_cand = [cv2.convexHull(c,clockwise=True) for c in aprox_contours if c.shape[0]==4 and cv2.arcLength(c,closed=True) > min_marker_perimeter]
-    # a non convex quadrangle is not what we are looking for.
-    rect_cand = [r for r in rect_cand if r.shape[0]==4]
-
-    if visualize:
-        cv2.drawContours(gray_img, rect_cand,-1, (255,100,50))
-
-
     markers = []
-    size = 10*grid_size
-    #top left,bottom left, bottom right, top right in image
-    mapped_space = np.array( ((0,0),(size,0),(size,size),(0,size)) ,dtype=np.float32).reshape(4,1,2)
-    for r in rect_cand:
-        if correct_gradient(gray_img,r):
-            r = np.float32(r)
-            M = cv2.getPerspectiveTransform(r,mapped_space)
-            flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
+    if contours != None: 
+        # keep only > thresh_area   
+        contours = [c for c in contours if cv2.contourArea(c) > (20 * 2500)]
+        
+        if len(contours) > 0: 
+            # epsilon is a precision parameter, here we use 10% of the arc
+            epsilon = cv2.arcLength(contours[0], True)*0.1
 
-            # Otsu documentation here :
-            # https://opencv-python-tutroals.readthedocs.org/en/latest/py_tutorials/py_imgproc/py_thresholding/py_thresholding.html#thresholding
-            _ , otsu = cv2.threshold(flat_marker_img,0,255,cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+            # find the volatile vertices of the contour
+            aprox_contours = [cv2.approxPolyDP(contours[0], epsilon, True)];
+            
+            rect_cand = [r for r in aprox_contours if r.shape[0]==4]
 
-            # getting a cleaner display of the rectangle marker
-            kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
-            cv2.erode(otsu,kernel,otsu, iterations=3)
-            # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-            # cv2.dilate(otsu,kernel,otsu, iterations=1)
+            # markers 
+            size = 10*grid_size
+            #top left,bottom left, bottom right, top right in image
+            mapped_space = np.array( ((0,0),(size,0),(size,size),(0,size)) ,dtype=np.float32).reshape(4,1,2)
+            for r in rect_cand:
+                r = np.float32(r)
+                M = cv2.getPerspectiveTransform(r,mapped_space)
+                flat_marker_img =  cv2.warpPerspective(gray_img, M, (size,size) )#[, dst[, flags[, borderMode[, borderValue]]]])
 
-            marker = decode(otsu, grid_size)
-            if marker is not None:
-                angle,msg = marker
+                marker = 0, 1
+                if marker is not None:
+                    angle,msg = marker
 
-                # define the criteria to stop and refine the marker verts
-                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-                cv2.cornerSubPix(gray_img,r,(3,3),(-1,-1),criteria)
+                    # define the criteria to stop and refine the marker verts
+                    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+                    cv2.cornerSubPix(gray_img,r,(3,3),(-1,-1),criteria)
 
-                centroid = r.sum(axis=0)/4.
-                centroid.shape = (2)
-                # angle is number of 90deg rotations
-                # roll points such that the marker points correspond with oriented marker
-                # rolling may not make the verts appear as you expect,
-                # but using m_screen_to_marker() will get you the marker with proper rotation.
-                r = np.roll(r,angle+1,axis=0) #np.roll is not the fastest when using these tiny arrays...
+                    centroid = r.sum(axis=0)/4.
+                    centroid.shape = (2)
 
-                r_norm = r/np.float32((gray_img.shape[1],gray_img.shape[0]))
-                r_norm[:,:,1] = 1-r_norm[:,:,1]
-                marker = {'id':msg,'verts':r,'verts_norm':r_norm,'centroid':centroid,"frames_since_true_detection":0}
-                if visualize:
-                    marker['img'] = np.rot90(otsu,-angle/90)
-                markers.append(marker)
+                    corners = np.array([r[0][0], r[1][0], r[2][0], r[3][0]])
+
+                    center = [0, 0]
+                    for i in corners:
+                        center += i
+                    center *= (1. / len(corners))
+
+                    corners = sortCorners(corners, center)
+                    r[0][0], r[1][0], r[2][0], r[3][0] = corners[0], corners[1], corners[2], corners[3]
+
+                    r_norm = r/np.float32((gray_img.shape[1],gray_img.shape[0]))
+                    r_norm[:,:,1] = 1-r_norm[:,:,1]
+                    marker = {'id':msg,'verts':r,'verts_norm':r_norm,'centroid':centroid,"frames_since_true_detection":0}
+
+                    markers.append(marker)
 
     return markers
 
