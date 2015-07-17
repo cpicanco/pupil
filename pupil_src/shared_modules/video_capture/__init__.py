@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 if os_name in ("Linux","Darwin"):
     from uvc_capture import Camera_Capture,device_list,CameraCaptureError
 elif os_name == "Windows":
-    from win_video import Camera_Capture,device_list,CameraCaptureError
+    from win_capture import Camera_Capture,device_list,CameraCaptureError
 else:
     raise NotImplementedError()
 
@@ -79,7 +79,8 @@ def autoCreateCapture(src,timestamps=None,timebase = None):
     #looking for attached cameras that match cv_id
     elif src_type is int:
         try:
-            cap = device_list()[i]
+            print src
+            cap = device_list()[src]
         except IndexError, e:
             logger.warning('Camera with id %s not found.'%src_type)
             return FakeCapture(timebase=timebase)
