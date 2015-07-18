@@ -12,6 +12,7 @@ from OpenGL.GL import *
 from pyglui.cygl.utils import RGBA,draw_points,draw_polyline
 from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS,glfwGetFramebufferSize
 from plugin import Plugin
+import cv2
 
 import logging
 logger = logging.getLogger(__name__)
@@ -81,11 +82,21 @@ class Trim_Marks(Plugin):
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_bar_space((x,y))
             self.in_mark = x
-
+            if (self.frame_count > x > 0):
+                cv2.putText(frame.img, str(int(x)),
+                    (45, int(frame.img.shape[0]) - 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (160,160,160), 2, lineType = cv2.CV_AA )
+    
         elif self.drag_out:
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_bar_space((x,y))
             self.out_mark = x
+            if (self.frame_count > x > 0):
+                cv2.putText(frame.img, str(int(x)),
+                    (int(frame.img.shape[1]) - 160, int(frame.img.shape[0]) - 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (160,160,160), 2, lineType = cv2.CV_AA )
+    
+
 
 
     def on_click(self,img_pos,button,action):

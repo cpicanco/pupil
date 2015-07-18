@@ -79,7 +79,7 @@ class Reference_Surface(object):
         self.camera_pose_3d = None
 
         self.uid = str(time())
-        self.real_world_size = {'x':1.,'y':1.}
+        self.real_world_size = {'x':1280.,'y':768.}
 
         ###window and gui vars
         self._window = None

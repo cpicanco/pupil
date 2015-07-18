@@ -34,7 +34,7 @@ class Offline_Reference_Surface(Reference_Surface):
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
-        self.heatmap_steps = {'x':1,'y':1}
+        self.heatmap_steps = {'x':1.,'y':1.}
         self.heatmap_blur = False
         self.heatmap_blur_gradation = .2
         self.heatmap = None
@@ -250,8 +250,8 @@ class Offline_Reference_Surface(Reference_Surface):
         x_size, y_size = self.real_world_size['x'], self.real_world_size['y']
 
         # create equidistant edges based on the user defined interval/size
-        x_bin = [x for x in xrange(0,int(x_size + 1), x_bin)]
-        y_bin = [y for y in xrange(0,int(y_size + 1), y_bin)]
+        x_bin = [x for x in xrange(0,int(x_size + 1), int(x_bin))]
+        y_bin = [y for y in xrange(0,int(y_size + 1), int(y_bin))]
 
         all_gaze = []
 
@@ -276,12 +276,12 @@ class Offline_Reference_Surface(Reference_Surface):
         # numpy.histogram2d does not follow the Cartesian convention
         hist = np.rot90(hist)
 
-        # smoothing/ rounded interpolation?
+        # smoothing
         if self.heatmap_blur:
-            filter_size = (int(self.heatmap_blur_gradation * len(x_bin)/2)*2 +1)
-            std_dev = filter_size /6.
+            kernel_size = (int(self.heatmap_blur_gradation * len(x_bin)/2)*2 +1)
+            sigma = kernel_size /6.
 
-            hist = cv2.GaussianBlur(hist, (filter_size, filter_size), std_dev)
+            hist = cv2.GaussianBlur(hist, (kernel_size, kernel_size), sigma)
 
         # scale convertion necessary for the colormapping
         maxval = np.amax(hist)
@@ -291,18 +291,19 @@ class Offline_Reference_Surface(Reference_Surface):
             scale = 0
 
         # colormapping
+        
         hist = np.uint8(hist * (scale))
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
 
         # we need a 4 channel image to apply transparency
         x, y, channels = c_map.shape
-        self.heatmap = np.ones((x, y, 4), dtype = np.uint8)
+        self.heatmap = np.zeros((x, y, 4), dtype = np.uint8)
 
         # lets assign the color channels
         self.heatmap[:, :, :3] = c_map
 
         # alpha blend/transparency
-        self.heatmap[:, :, 3] = 125
+        self.heatmap[:, :, 3] = 127
 
         # here we approximate the image size trying to inventing as less data as possible
         # so resizing with a nearest-neighbor interpolation gives good results

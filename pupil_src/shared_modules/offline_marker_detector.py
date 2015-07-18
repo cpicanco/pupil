@@ -120,6 +120,62 @@ class Offline_Marker_Detector(Plugin):
             self.g_pool.quickbar.remove(self.add_button)
             self.add_button = None
 
+    def screen_segmentation(self):
+        """
+        no standards here, uv_coords ordering differing from the surface vertice one.
+
+        0 . 1
+        .   .
+        3 . 2
+        uv 
+
+        3 . 2
+        .   .
+        0 . 1
+        sv
+
+        """
+        surface_vertices_to_move = []
+        for s in self.surfaces:
+            s.real_world_size['x'] = s.real_world_size['x']/2.
+            if s.name == 'Left':
+                uv = s.markers.values()[0].uv_coords
+                # original marker position
+                surface_vertices_to_move.append((s, 3, uv[0]))
+                surface_vertices_to_move.append((s, 2, uv[1]))
+                surface_vertices_to_move.append((s, 1, uv[2]))  
+                surface_vertices_to_move.append((s, 0, uv[3]))
+
+                # take the midpoint of the segment to the new position
+                new_pos = [(uv[0][0][0] + uv[1][0][0])/2., (uv[0][0][1] + uv[1][0][1])/2.]
+                surface_vertices_to_move.append((s, 2, new_pos))
+
+                new_pos = [(uv[2][0][0] + uv[3][0][0])/2., (uv[2][0][1] + uv[3][0][1])/2.]
+                surface_vertices_to_move.append((s, 1, new_pos))
+
+            if s.name == 'Right':
+                uv = s.markers.values()[0].uv_coords
+                # original marker position
+                surface_vertices_to_move.append((s, 3, uv[0]))
+                surface_vertices_to_move.append((s, 2, uv[1]))
+                surface_vertices_to_move.append((s, 1, uv[2]))  
+                surface_vertices_to_move.append((s, 0, uv[3]))
+
+                # take the midpoint of the segment to the new position
+                new_pos = [(uv[0][0][0] + uv[1][0][0])/2., (uv[0][0][1] + uv[1][0][1])/2.]
+                surface_vertices_to_move.append((s, 3, new_pos))
+
+                new_pos = [(uv[2][0][0] + uv[3][0][0])/2., (uv[2][0][1] + uv[3][0][1])/2.]
+                surface_vertices_to_move.append((s, 0, new_pos))
+                     
+        for (s, v_idx, new_pos) in surface_vertices_to_move:
+            if s.detected:
+                s.move_vertex(v_idx,np.array(new_pos))
+                s.cache = None
+                self.heatmap = None
+
+        self.update_gui_markers()
+      
     def update_gui_markers(self):
         pass
         self.menu.elements[:] = []
@@ -130,6 +186,7 @@ class Offline_Marker_Detector(Plugin):
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
+        self.menu.append(ui.Button("Add screen segmentation", self.screen_segmentation))
         self.menu.append(ui.Info_Text('Heatmap Blur'))
         self.menu.append(ui.Switch('heatmap_blur', self, label='Blur'))
         self.menu.append(ui.Slider('heatmap_blur_gradation',self,min=0.01,step=0.01,max=1.0,label='Blur Gradation'))
@@ -182,6 +239,9 @@ class Offline_Marker_Detector(Plugin):
 
     def add_surface(self,_):
         self.surfaces.append(Offline_Reference_Surface(self.g_pool))
+        self.surfaces.append(Offline_Reference_Surface(self.g_pool))
+        self.surfaces[0].name = 'Left'
+        self.surfaces[1].name = 'Right'
         self.update_gui_markers()
 
     def remove_surface(self,i):

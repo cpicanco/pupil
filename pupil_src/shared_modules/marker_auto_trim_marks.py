@@ -250,7 +250,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         width,height = self.win_size
         h_pad = padding * (frame_max-2)/float(width)
         v_pad = padding* 1./(height-2)
-        gluOrtho(-h_pad,  (frame_max-1)+h_pad, -v_pad, 1+v_pad,-1, 1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
+        glOrtho(-h_pad,  (frame_max-1)+h_pad, -v_pad, 1+v_pad,-1, 1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
 
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
