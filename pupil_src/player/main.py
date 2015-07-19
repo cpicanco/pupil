@@ -118,9 +118,11 @@ from manual_gaze_correction import Manual_Gaze_Correction
 from show_calibration import Show_Calibration
 from batch_exporter import Batch_Exporter
 from eye_video_overlay import Eye_Video_Overlay
+from segmentation import Segmentation
 
 system_plugins = Seek_Bar,Trim_Marks
-user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline, Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration, Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Marker_Auto_Trim_Marks
+user_launchable_plugins = Export_Launcher, Vis_Circle,Vis_Cross, Vis_Polyline,Vis_Light_Points,Scan_Path,Dispersion_Duration_Fixation_Detector,Vis_Watermark, Manual_Gaze_Correction, Show_Calibration,Offline_Marker_Detector,Pupil_Server,Batch_Exporter,Eye_Video_Overlay,Segmentation#,Marker_Auto_Trim_Marks
+
 available_plugins = system_plugins + user_launchable_plugins
 name_by_index = [p.__name__ for p in available_plugins]
 index_by_name = dict(zip(name_by_index,range(len(name_by_index))))
@@ -161,6 +163,9 @@ def session(rec_dir):
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*y_scroll_factor)
 
+    def on_close(window):
+        glfwSetWindowShouldClose(main_window,True)
+        logger.debug('Process closing from window')
 
     def on_drop(window,count,paths):
         for x in range(count):
@@ -268,10 +273,11 @@ def session(rec_dir):
                 p.alive = False
         g_pool.plugins.clean()
 
+
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
-    g_pool.main_menu.append(ui.Button("quit",lambda: on_close(None)))
+    g_pool.main_menu.append(ui.Button("Close",lambda: on_close(None)))
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))
@@ -436,8 +442,6 @@ def session(rec_dir):
     destroy_named_texture(g_pool.image_tex)
     glfwDestroyWindow(main_window)
 
-
-
 def show_no_rec_window():
     from pyglui.pyfontstash import fontstash
     from pyglui.ui import get_roboto_font_path
@@ -456,7 +460,7 @@ def show_no_rec_window():
     # load session persistent settings
     session_settings = Persistent_Dict(os.path.join(user_dir,"user_settings"))
     if session_settings.get("version",VersionFormat('0.0')) < get_version(version_file):
-        logger.info("Session setting are from older version of this app. I will not use those.")
+        logger.info("Session settings are from older version of this app. I will not use those.")
         session_settings.clear()
     w,h = session_settings.get('window_size',(1280,720))
     window_pos = session_settings.get('window_position',(0,0))
@@ -476,9 +480,9 @@ def show_no_rec_window():
     glfont.set_color_float((0.2,0.2,0.2,0.9))
     basic_gl_setup()
     glClearColor(0.5,.5,0.5,0.0)
-    text = 'Drop a recoding directory onto this window.'
+    text = 'Drop a recording directory onto this window.'
     tip = '(Tip: You can drop a recording directory onto the app icon.)'
-    # text = "Please supply a Pupil recoding directory as first arg when calling Pupil Player."
+    # text = "Please supply a Pupil recording directory as first arg when calling Pupil Player."
     while not glfwWindowShouldClose(window):
         clear_gl_screen()
         glfont.set_blur(10.5)
