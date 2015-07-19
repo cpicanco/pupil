@@ -184,7 +184,7 @@ class Offline_Marker_Detector(Plugin):
         self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
-        self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
+        self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statistics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
         self.menu.append(ui.Button("Add screen segmentation", self.screen_segmentation))
         self.menu.append(ui.Info_Text('Heatmap Blur'))
@@ -443,7 +443,7 @@ class Offline_Marker_Detector(Plugin):
         glPopMatrix()
 
 
-    def save_surface_statsics_to_file(self):
+    def save_surface_statistics_to_file(self):
 
         in_mark = self.g_pool.trim_marks.in_mark
         out_mark = self.g_pool.trim_marks.out_mark
