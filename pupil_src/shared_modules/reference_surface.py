@@ -17,11 +17,12 @@ from OpenGL.GL import *
 
 from pyglui.cygl.utils import RGBA
 from pyglui.cygl.utils import draw_polyline_norm,draw_polyline,draw_points_norm,draw_points,draw_named_texture
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_opensans_font_path
+
 from OpenGL.GL import GL_LINES
 from methods import GetAnglesPolyline,normalize
 
-from pyglui.pyfontstash import fontstash
-from pyglui.ui import get_opensans_font_path
 #ctypes import for atb_vars:
 from time import time
 
