@@ -28,13 +28,11 @@ class Manual_Gaze_Correction(Plugin):
         self.order = .3
         self.menu = None
 
-
         self.untouched_gaze_positions_by_frame = deepcopy(self.g_pool.gaze_positions_by_frame)
         self.x_offset = float(x_offset)
         self.y_offset = float(y_offset)
 
-
-
+        self._set_offset()
 
     def _set_offset(self):
         x,y = self.x_offset,self.y_offset
@@ -73,7 +71,6 @@ class Manual_Gaze_Correction(Plugin):
     def get_init_dict(self):
         return {'x_offset':self.x_offset,'y_offset':self.y_offset}
 
-
     def cleanup(self):
         """ called when the plugin gets terminated.
         This happens either voluntarily or forced.
@@ -81,4 +78,3 @@ class Manual_Gaze_Correction(Plugin):
         """
         self.g_pool.gaze_positions_by_frame = self.untouched_gaze_positions_by_frame
         self.deinit_gui()
-
