@@ -24,7 +24,7 @@ class Trim_Marks(Plugin):
     """
     def __init__(self, g_pool, focus=0, sections=[]):
         super(Trim_Marks, self).__init__(g_pool)
-        g_pool.trim_marks = self #attach self for ease of acces by others.
+        g_pool.trim_marks = self # attach self for ease of access by others.
         self.order = .8
         self.capture = g_pool.capture
         self.frame_count = self.capture.get_frame_count()
@@ -34,14 +34,16 @@ class Trim_Marks(Plugin):
 
         # sections
         if sections:
-            self.sections = sections
-            self._in_mark, self._out_mark = self.sections[self._focus]
+            self._sections = sections
+            self._in_mark, self._out_mark = self._sections[self._focus]
         else:
             self._in_mark = 0
             self._out_mark = self.frame_count
             sections.append([self._in_mark, self._out_mark])
-            self.sections = sections
-        
+            self._sections = sections
+
+        self.mid_sections = [self.get_mid_section(s)for s in self._sections] 
+
         self.drag_in = False
         self.drag_out = False
         #display layout
@@ -57,13 +59,22 @@ class Trim_Marks(Plugin):
         self.glfont.set_color_float((0.7,0.7,0.7,1.0))
 
     @property
+    def sections(self):
+        return self._sections
+
+    @sections.setter
+    def sections(self, value):
+        self._sections = value
+        self.mid_sections = [self.get_mid_section(s) for s in self._sections]       
+
+    @property
     def focus(self):
         return self._focus
 
     @focus.setter
     def focus(self, value):
         self._focus = value
-        (self.in_mark, self.out_mark) = self.sections[self._focus]
+        (self._in_mark, self._out_mark) = self.sections[self._focus]
 
     @property
     def in_mark(self):
@@ -72,7 +83,8 @@ class Trim_Marks(Plugin):
     @in_mark.setter
     def in_mark(self, value):
         self._in_mark = int(min(self._out_mark,max(0,value)))
-        self.section[self.focus][0] = self._in_mark
+        self.sections[self.focus][0] = self._in_mark
+        self.mid_sections[self.focus] = self.get_mid_section(self.sections[self.focus])
 
     @property
     def out_mark(self):
@@ -81,12 +93,17 @@ class Trim_Marks(Plugin):
     @out_mark.setter
     def out_mark(self, value):
         self._out_mark = int(min(self.frame_count,max(self.in_mark,value)))
-        self.section[self.focus][1] = self._out_mark
+        self.sections[self.focus][1] = self._out_mark
+        self.mid_sections[self.focus] = self.get_mid_section(self.sections[self.focus])
 
     def set(self,mark_range):
         self._in_mark,self._out_mark = mark_range
         self.sections.append([self._in_mark,self._out_mark])
+        self.mid_sections = [self.get_mid_section(s) for s in self.sections] 
         self.focus = len(self.sections)-1
+
+    def get_mid_section(self, s):
+        return int(s[0] + ((s[1]-s[0])/2))
 
     def get_string(self):
         return '%s - %s'%(self._in_mark,self._out_mark)
@@ -98,6 +115,8 @@ class Trim_Marks(Plugin):
             out_m = int(out_m)
             self.in_mark = in_m
             self.out_mark = out_m
+            self.sections.append([self._in_mark,self._out_mark])
+            self.focus = len(self.sections)-1
         except:
             logger.warning("Setting Trimmarks via string failed.")
     
@@ -153,6 +172,17 @@ class Trim_Marks(Plugin):
         elif action == GLFW_RELEASE:
             self.drag_out = False
             self.drag_in = False
+
+            # would be great to expand the click area horizontally for big sections
+            for s in self.sections:
+                if s is not self.sections[self.focus]:
+                    midsec = self.mid_sections[self.sections.index(s)]
+                    screen_midsec_pos = self.bar_space_to_screen((midsec,0))
+                    dist = abs(pos[0]-screen_midsec_pos[0])+abs(pos[1]-screen_midsec_pos[1])
+                    if dist < 10:
+                        if self.distance_in_pix(midsec,self.capture.get_frame_index()) > 20:
+                            self.focus = self.sections.index(s)
+                            break
 
 
     def distance_in_pix(self,frame_pos_0,frame_pos_1):
@@ -220,6 +250,10 @@ class Trim_Marks(Plugin):
             for s in self.sections:
                 for mark in s:
                     draw_points([(mark,0),],color=color2,size=5)
+
+        if self.mid_sections:
+            for m in self.mid_sections:
+                draw_points([(m,0),],color=RGBA(.1,.9,.9,.1),size=10)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
