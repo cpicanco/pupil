@@ -43,7 +43,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
         + duration (temporal) = what is the minimum time required for gaze data to be within dispersion threshold?
 
     '''
-    def __init__(self,g_pool,max_dispersion = 1.0,min_duration = 0.15,h_fov=78, v_fov=50,show_fixations = False):
+    def __init__(self,g_pool,max_dispersion = 1.0,min_duration = 0.15,h_fov=64, v_fov=36,show_fixations = False):
         super(Dispersion_Duration_Fixation_Detector, self).__init__(g_pool)
         self.min_duration = min_duration
         self.max_dispersion = max_dispersion
@@ -176,11 +176,6 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 
     def export_fixations(self):
         #todo
-
-        in_mark = self.g_pool.trim_marks.in_mark
-        out_mark = self.g_pool.trim_marks.out_mark
-
-
         """
         between in and out mark
 
@@ -197,45 +192,51 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             logger.warning('No fixations in this recording nothing to export')
             return
 
-        for f in self.fixations:
-            if f['start_frame_index'] >= in_mark:
-                first_fixation = f
-                break
-        for f in self.fixations[::-1]:
-            if f['end_frame_index'] <= out_mark:
-                last_fixation = f
-                break
+        for s in self.g_pool.trim_marks.sections:
+            self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(s);
+            
+            in_mark = s[0]
+            out_mark = s[1]
 
-        fixations_in_section = self.fixations[first_fixation['id']:last_fixation['id']+1]
+            for f in self.fixations:
+                if f['start_frame_index'] >= in_mark:
+                    first_fixation = f
+                    break
+            for f in self.fixations[::-1]:
+                if f['end_frame_index'] <= out_mark:
+                    last_fixation = f
+                    break
 
-
-        metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
-        logger.info("exporting metrics to %s"%metrics_dir)
-        if os.path.isdir(metrics_dir):
-            logger.info("Will overwrite previous export for this section.")
-        else:
-            try:
-                os.mkdir(metrics_dir)
-            except:
-                logger.warning("Could not make metrics dir %s!"%metrics_dir)
-                return
+            fixations_in_section = self.fixations[first_fixation['id']:last_fixation['id']+1]
 
 
-        with open(os.path.join(metrics_dir,'fixations.csv'),'wb') as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence'))
-            for f in fixations_in_section:
-                csv_writer.writerow( ( f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f['norm_pos'][0],f['norm_pos'][1],f['dispersion'],f['pupil_diameter'],f['confidence'] ) )
-            logger.info("Created 'fixations.csv' file.")
+            metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+            logger.info("exporting metrics to %s"%metrics_dir)
+            if os.path.isdir(metrics_dir):
+                logger.info("Will overwrite previous export for this section.")
+            else:
+                try:
+                    os.mkdir(metrics_dir)
+                except:
+                    logger.warning("Could not make metrics dir %s!"%metrics_dir)
+                    return
 
-        with open(os.path.join(metrics_dir,'fixation_report.csv'),'wb') as csvfile:
-            csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
-            csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
-            csv_writer.writerow(('min_duration','%0.3f sec'%self.min_duration) )
-            csv_writer.writerow((''))
-            csv_writer.writerow(('fixation_count',len(fixations_in_section)))
-            logger.info("Created 'fixation_report.csv' file.")
+
+            with open(os.path.join(metrics_dir,'fixations.csv'),'wb') as csvfile:
+                csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence'))
+                for f in fixations_in_section:
+                    csv_writer.writerow( ( f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f['norm_pos'][0],f['norm_pos'][1],f['dispersion'],f['pupil_diameter'],f['confidence'] ) )
+                logger.info("Created 'fixations.csv' file.")
+
+            with open(os.path.join(metrics_dir,'fixation_report.csv'),'wb') as csvfile:
+                csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+                csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
+                csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
+                csv_writer.writerow(('min_duration','%0.3f sec'%self.min_duration) )
+                csv_writer.writerow((''))
+                csv_writer.writerow(('fixation_count',len(fixations_in_section)))
+                logger.info("Created 'fixation_report.csv' file.")
 
 
 
