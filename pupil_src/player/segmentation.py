@@ -101,9 +101,30 @@ class Segmentation(Plugin):
         np.save(self.custom_events_dir,np.asarray(self.custom_events))
 
     def auto_trim(self):
-        # take defined sections and pass them to the trim_marks
-        # self.trim_marks
-        pass
+        # create sections and pass them to the trim_marks
+        sections = []
+        events = sorted(self.custom_events, key=int)
+        size = len(events)
+        if size > 1:
+            i = 0
+            while True:
+                if self.mode == 'chain':
+                    if i == 0:
+                        sections.append([events[i],events[i+1]])
+                    elif (i > 0) and (i < (size-1)):
+                        sections.append([events[i]+1,events[i+1]])
+                    i += 1
+                
+                elif self.mode == 'in out pairs':
+                    if i < (size-1):
+                        sections.append([events[i],events[i+1]])
+                    i += 2
+
+                if i > (size-1):
+                    break
+
+        self.trim_marks.sections = sections
+        self.trim_marks.focus = 0
 
     def load_events_to_draw(self):
         scapp_output_path = path.join(self.g_pool.rec_dir,'scapp_output')      
@@ -177,7 +198,8 @@ class Segmentation(Plugin):
         glLoadIdentity()
 
         #Draw...............................................................................
-        
+        #todo
+        # need to organize this drawings options by session type 
         for pos_to_draw in self.pos_begin_trial:   
             draw_points([(pos_to_draw, 0)], size = 5, color = RGBA(.5, .5, .5, .5))
             draw_polyline( [(pos_to_draw,.05),(pos_to_draw,0)], color = RGBA(.5, .5, .5, .5))
