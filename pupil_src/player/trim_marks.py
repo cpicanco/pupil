@@ -10,9 +10,11 @@
 
 from OpenGL.GL import *
 from pyglui.cygl.utils import RGBA,draw_points,draw_polyline
-from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,GLFW_RELEASE,GLFW_PRESS,glfwGetFramebufferSize
+from pyglui.pyfontstash import fontstash
+from pyglui.ui import get_roboto_font_path
+from pyglui import ui
+from glfw import glfwGetWindowSize,glfwGetCurrentContext,glfwGetCursorPos,glfwGetFramebufferSize,GLFW_RELEASE,GLFW_PRESS,GLFW_KEY_COMMA,GLFW_KEY_PERIOD
 from plugin import Plugin
-import cv2
 
 import logging
 logger = logging.getLogger(__name__)
@@ -20,19 +22,48 @@ logger = logging.getLogger(__name__)
 class Trim_Marks(Plugin):
     """docstring for Trim_Mark
     """
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, focus=0, sections=[]):
         super(Trim_Marks, self).__init__(g_pool)
         g_pool.trim_marks = self #attach self for ease of acces by others.
         self.order = .8
         self.capture = g_pool.capture
         self.frame_count = self.capture.get_frame_count()
-        self._in_mark = 0
-        self._out_mark = self.frame_count
+
+        # focused section
+        self._focus = focus
+
+        # sections
+        if sections:
+            self.sections = sections
+            self._in_mark, self._out_mark = self.sections[self._focus]
+        else:
+            self._in_mark = 0
+            self._out_mark = self.frame_count
+            sections.append([self._in_mark, self._out_mark])
+            self.sections = sections
+        
         self.drag_in = False
         self.drag_out = False
         #display layout
-        self.padding = 20. #in sceen pixel
+        self.padding = 20. #in screen pixel
         self.window_size = 0,0
+
+        self.frame_size = self.capture.frame_size
+        # on drag text
+        self.text = ['','']
+        self.glfont = fontstash.Context()
+        self.glfont.add_font('roboto',get_roboto_font_path())
+        self.glfont.set_size(self.frame_size[0]/30)
+        self.glfont.set_color_float((0.7,0.7,0.7,1.0))
+
+    @property
+    def focus(self):
+        return self._focus
+
+    @focus.setter
+    def focus(self, value):
+        self._focus = value
+        (self.in_mark, self.out_mark) = self.sections[self._focus]
 
     @property
     def in_mark(self):
@@ -41,6 +72,7 @@ class Trim_Marks(Plugin):
     @in_mark.setter
     def in_mark(self, value):
         self._in_mark = int(min(self._out_mark,max(0,value)))
+        self.section[self.focus][0] = self._in_mark
 
     @property
     def out_mark(self):
@@ -49,9 +81,12 @@ class Trim_Marks(Plugin):
     @out_mark.setter
     def out_mark(self, value):
         self._out_mark = int(min(self.frame_count,max(self.in_mark,value)))
+        self.section[self.focus][1] = self._out_mark
 
     def set(self,mark_range):
         self._in_mark,self._out_mark = mark_range
+        self.sections.append([self._in_mark,self._out_mark])
+        self.focus = len(self.sections)-1
 
     def get_string(self):
         return '%s - %s'%(self._in_mark,self._out_mark)
@@ -65,6 +100,7 @@ class Trim_Marks(Plugin):
             self.out_mark = out_m
         except:
             logger.warning("Setting Trimmarks via string failed.")
+    
     def init_gui(self):
         self.on_window_resize(glfwGetCurrentContext(),*glfwGetWindowSize(glfwGetCurrentContext()))
 
@@ -74,7 +110,6 @@ class Trim_Marks(Plugin):
         self.v_pad = self.padding * 1./h
 
     def update(self,frame,events):
-
         if frame.index == self.out_mark or frame.index == self.in_mark:
             self.g_pool.play=False
 
@@ -82,22 +117,13 @@ class Trim_Marks(Plugin):
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_bar_space((x,y))
             self.in_mark = x
-            if (self.frame_count > x > 0):
-                cv2.putText(frame.img, str(int(x)),
-                    (45, int(frame.img.shape[0]) - 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (160,160,160), 2, lineType = cv2.CV_AA )
-    
+            self.text[0] = str(self.in_mark)
+            
         elif self.drag_out:
             x,y = glfwGetCursorPos(glfwGetCurrentContext())
             x,_ = self.screen_to_bar_space((x,y))
             self.out_mark = x
-            if (self.frame_count > x > 0):
-                cv2.putText(frame.img, str(int(x)),
-                    (int(frame.img.shape[1]) - 160, int(frame.img.shape[0]) - 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (160,160,160), 2, lineType = cv2.CV_AA )
-    
-
-
+            self.text[1] = str(self.out_mark)
 
     def on_click(self,img_pos,button,action):
         """
@@ -134,7 +160,6 @@ class Trim_Marks(Plugin):
         fr1_screen_x,_ = self.bar_space_to_screen((frame_pos_1,0))
         return abs(fr0_screen_x-fr1_screen_x)
 
-
     def bar_space_to_screen(self,pos):
         width,height = self.window_size
         x,y=pos
@@ -143,7 +168,6 @@ class Trim_Marks(Plugin):
         y  = y*(height-2*self.padding)+self.padding
         return x,y
 
-
     def screen_to_bar_space(self,pos):
         width,height = glfwGetWindowSize(glfwGetCurrentContext())
         x,y=pos
@@ -151,23 +175,51 @@ class Trim_Marks(Plugin):
         y  = (y-self.padding)/(height-2*self.padding)
         return x,1-y
 
+    def load_sections(self, sections):
+        """
+        sections: list of [int(in_frame), int(out_frame)]
+        """
+        pass
+
+    def save_current_sections(self, sections_set):
+        pass
+
+    def get_init_dict(self):
+        return {'focus':self.focus,
+                'sections':self.sections}
+
+    def clone(self):
+        return Trim_Marks(**self.get_init_dict())
+
     def gl_display(self):
+        # still need appropriate padding and resizing
+        w, h = self.frame_size
+        if self.drag_in:
+            self.glfont.draw_text((w/8),h-(h/20),self.text[0])
+        elif self.drag_out:
+            self.glfont.draw_text((w/8)*7,h-(h/20),self.text[1])
 
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
+
         glOrtho(-self.h_pad,  (self.frame_count)+self.h_pad, -self.v_pad, 1+self.v_pad,-1,1) # ranging from 0 to cache_len-1 (horizontal) and 0 to 1 (vertical)
         glMatrixMode(GL_MODELVIEW)
         glPushMatrix()
         glLoadIdentity()
 
         color1 = RGBA(.1,.9,.2,.5)
-        color2 = RGBA(.1,.9,.2,.5)
+        color2 = RGBA(.1,.9,.9,.5)
 
         if self.in_mark != 0 or self.out_mark != self.frame_count:
             draw_polyline( [(self.in_mark,0),(self.out_mark,0)],color=color1,thickness=2)
-        draw_points([(self.in_mark,0),],color=color2,size=10)
-        draw_points([(self.out_mark,0),],color=color2,size=10)
+        draw_points([(self.in_mark,0),],color=color1,size=10)
+        draw_points([(self.out_mark,0),],color=color1,size=10)
+
+        if self.sections:
+            for s in self.sections:
+                for mark in s:
+                    draw_points([(mark,0),],color=color2,size=5)
 
         glMatrixMode(GL_PROJECTION)
         glPopMatrix()
