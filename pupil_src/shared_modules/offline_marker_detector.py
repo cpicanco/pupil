@@ -428,10 +428,10 @@ class Offline_Marker_Detector(Plugin):
         glPushMatrix()
         glLoadIdentity()
 
-        color = RGBA(8.,.6,.2,8.)
+        color = RGBA(.8,.6,.2,.6)
         draw_polyline(cached_ranges,color=color,line_type=GL_LINES,thickness=4)
 
-        color = RGBA(0.,.7,.3,8.)
+        color = RGBA(0,.7,.3,.6)
 
         for s in cached_surfaces:
             glTranslatef(0,.02,0)
