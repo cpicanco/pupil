@@ -96,14 +96,14 @@ class Trim_Marks(Plugin):
         self.sections[self.focus][1] = self._out_mark
         self.mid_sections[self.focus] = self.get_mid_section(self.sections[self.focus])
 
-    def set(self,mark_range):
-        self._in_mark,self._out_mark = mark_range
-        self.sections.append([self._in_mark,self._out_mark])
-        self.mid_sections = [self.get_mid_section(s) for s in self.sections] 
-        self.focus = len(self.sections)-1
-
     def get_mid_section(self, s):
         return int(s[0] + ((s[1]-s[0])/2))
+
+    def set(self,mark_range):
+        self._in_mark,self._out_mark = mark_range
+        self.sections[self.focus][0] = self._in_mark
+        self.sections[self.focus][1] = self._out_mark
+        self.mid_sections[self.focus] = self.get_mid_section(self.sections[self.focus])
 
     def get_string(self):
         return '%s - %s'%(self._in_mark,self._out_mark)
@@ -115,8 +115,6 @@ class Trim_Marks(Plugin):
             out_m = int(out_m)
             self.in_mark = in_m
             self.out_mark = out_m
-            self.sections.append([self._in_mark,self._out_mark])
-            self.focus = len(self.sections)-1
         except:
             logger.warning("Setting Trimmarks via string failed.")
     
