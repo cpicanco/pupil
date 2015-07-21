@@ -200,35 +200,37 @@ class Segmentation(Plugin):
         #Draw...............................................................................
         #todo
         # need to organize this drawings options by session type 
-        for pos_to_draw in self.pos_begin_trial:   
-            draw_points([(pos_to_draw, 0)], size = 5, color = RGBA(.5, .5, .5, .5))
-            draw_polyline( [(pos_to_draw,.05),(pos_to_draw,0)], color = RGBA(.5, .5, .5, .5))
+        #for pos_to_draw in self.pos_begin_trial:   
+        #    draw_points([(pos_to_draw, 0.01)], size = 5, color = RGBA(.5, .5, .5, .5))
+        #    draw_polyline( [(pos_to_draw,.06),(pos_to_draw,0)], color = RGBA(.5, .5, .5, .5))
 
-        for pos_to_draw in self.pos_first_response:
-            draw_points([(pos_to_draw, 0)], size = 5, color = RGBA(.0, .0, .5, 1.))    
-            draw_polyline( [(pos_to_draw,.025),(pos_to_draw,0)], color = RGBA(.0, .0, .7, 1.))
+        #for pos_to_draw in self.pos_first_response:
+        #    draw_points([(pos_to_draw, 0.01)], size = 5, color = RGBA(.0, .0, .5, 1.))    
+        #    draw_polyline( [(pos_to_draw,.035),(pos_to_draw,0)], color = RGBA(.0, .0, .7, 1.))
 
-        for pos_to_draw in self.pos_end_limited_hold:
-            draw_points([(pos_to_draw, 0)], size = 5, color = RGBA(.5, .0, .0, 1.)) 
-            draw_polyline( [(pos_to_draw,.025),(pos_to_draw,0)], color = RGBA(.7, .0, .0, 1.))
+        #for pos_to_draw in self.pos_end_limited_hold:
+        #    draw_points([(pos_to_draw, 0.01)], size = 5, color = RGBA(.5, .0, .0, 1.)) 
+        #    draw_polyline( [(pos_to_draw,.035),(pos_to_draw,0)], color = RGBA(.7, .0, .0, 1.))
         
-        for x, first_response in enumerate(self.pos_first_response):
-            draw_polyline( [(self.pos_end_limited_hold[x],.025),(first_response,.025)], color = RGBA(1., .5, .0, 1.))    
+        #for x, first_response in enumerate(self.pos_first_response):
+        #    draw_polyline( [(self.pos_end_limited_hold[x],.025),(first_response,.025)], color = RGBA(1., .5, .0, 1.))    
+
+        # custom events
 
         for e in self.custom_events:
-            draw_polyline([(e,.05),(e,0)], color = RGBA(.8, .8, .8, .8))
+            draw_polyline([(e,.06),(e,.005)], color = RGBA(.8, .8, .8, .8))
 
         size = len(self.custom_events)
         if size > 1:
             for i, e in enumerate(self.custom_events):
-                draw_points([(e, .025)], size = 5, color = RGBA(.1, .5, .5, 1.)) 
+                draw_points([(e, .03)], size = 5, color = RGBA(.1, .5, .5, 1.)) 
 
             i = 0
             while True:
                 if i == 0:
-                    draw_polyline([(self.custom_events[i],.025),(self.custom_events[i+1],0.025)], color = RGBA(.8, .8, .8, .8))
+                    draw_polyline([(self.custom_events[i],.03),(self.custom_events[i+1],0.03)], color = RGBA(.8, .8, .8, .8))
                 elif (i > 0) and (i < (size-1)):
-                    draw_polyline([(self.custom_events[i] +1,.025),(self.custom_events[i+1],0.025)], color = RGBA(.8, .8, .8, .8))
+                    draw_polyline([(self.custom_events[i] +1,.03),(self.custom_events[i+1],0.03)], color = RGBA(.8, .8, .8, .8))
 
                 if self.mode == 'chain':
                     i += 1
