@@ -236,11 +236,14 @@ class Trim_Marks(Plugin):
 
         if self.in_mark != 0 or self.out_mark != self.frame_count:
             draw_polyline( [(self.in_mark,0),(self.out_mark,0)],color=color1,thickness=2)
+ 
         draw_points([(self.in_mark,0),],color=color1,size=10)
         draw_points([(self.out_mark,0),],color=color1,size=10)
 
         if self.sections:
             for s in self.sections:
+                if self.sections.index(s) != self.focus:
+                    draw_polyline( [(s[0],0),(s[1],0)],color=RGBA(.1,.9,.9,.2),thickness=2)
                 for mark in s:
                     draw_points([(mark,0),],color=color2,size=5)
 
