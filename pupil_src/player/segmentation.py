@@ -29,6 +29,7 @@ from plugin import Plugin
 import logging
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING) 
 
 class Segmentation(Plugin):
     """
@@ -71,17 +72,18 @@ class Segmentation(Plugin):
         self.pos_first_response = []
         self.pos_end_limited_hold = []
         self.pos_else = []
-        
         self.custom_events_path = path.join(self.g_pool.rec_dir,'custom_events.npy')
         try:
             self.custom_events = list(np.load(self.custom_events_path))
+            logger.info("Custom events were found at: "+ self.custom_events_path)
         except:
             logger.warning("No custom events were found at: "+ self.custom_events_path)
             self.custom_events = custom_events
             if not self.custom_events:
-                logger.warning("No chached events were found.") 
+                logger.warning("No chached events were found.")
+            else:
+                logger.warning("Using chached events. Please, save them if necessary. Otherwise, if you close Segmentation plugin those events will be lost.")
  
-
     def event_undo(self, arg):
         if self.custom_events:
             self.custom_events.pop()

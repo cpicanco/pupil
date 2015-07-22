@@ -163,10 +163,6 @@ def session(rec_dir):
     def on_scroll(window,x,y):
         g_pool.gui.update_scroll(x,y*y_scroll_factor)
 
-    def on_close(window):
-        glfwSetWindowShouldClose(main_window,True)
-        logger.debug('Process closing from window')
-
     def on_drop(window,count,paths):
         for x in range(count):
             new_rec_dir =  paths[x]
@@ -277,7 +273,7 @@ def session(rec_dir):
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)
     g_pool.main_menu = ui.Growing_Menu("Settings",pos=(-350,20),size=(300,400))
-    g_pool.main_menu.append(ui.Button("Close",lambda: on_close(None)))
+    g_pool.main_menu.append(ui.Button("Close Pupil Player",lambda: glfwSetWindowShouldClose(main_window,True)))
     g_pool.main_menu.append(ui.Slider('scale',g_pool.gui, setter=set_scale,step = .05,min=0.75,max=2.5,label='Interface Size'))
     g_pool.main_menu.append(ui.Info_Text('Player Version: %s'%g_pool.version))
     g_pool.main_menu.append(ui.Info_Text('Recording Version: %s'%rec_version))

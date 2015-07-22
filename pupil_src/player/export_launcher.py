@@ -109,7 +109,8 @@ class Export_Launcher(Plugin):
         for job in self.exports[::-1]:
             submenu = ui.Growing_Menu(job.out_file_path)
             # todo 
-            # Need to update the max based on the current section frames
+            # Need to update the max to reflect the current section frames
+            # or update the status to add incremental current frames
             progress_bar = ui.Slider('progress', getter=job.status, min=0, max=job.frames_to_export.value)
             progress_bar.read_only = True
             submenu.append(progress_bar)
