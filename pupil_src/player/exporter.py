@@ -60,7 +60,7 @@ plugin_by_name = dict(zip(name_by_index,available_plugins))
 class Global_Container(object):
         pass
 
-def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None):
+def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame=None,end_frame=None,plugin_initializers=[],out_file_path=None, sections=None):
 
     logger = logging.getLogger(__name__+' with pid: '+str(os.getpid()) )
 
@@ -94,100 +94,115 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
         logger.error("could not start capture.")
         return
 
-    #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
-    if out_file_path is None:
-        out_file_path = os.path.join(rec_dir, "world_viz.mp4")
+    # test for defined sections
+    if sections:
+        pass
     else:
-        file_name =  os.path.basename(out_file_path)
-        dir_name = os.path.dirname(out_file_path)
-        if not dir_name:
-            dir_name = rec_dir
-        if not file_name:
-            file_name = 'world_viz.mp4'
-        out_file_path = os.path.expanduser(os.path.join(dir_name,file_name))
+        sections = [[start_frame,end_frame]] 
 
-    if os.path.isfile(out_file_path):
-        logger.warning("Video out file already exsists. I will overwrite!")
-        os.remove(out_file_path)
-    logger.debug("Saving Video to %s"%out_file_path)
+    for s in sections:
+        file_name = ''
+        section_index = sections.index(s)
+        start_frame = s[0]
+        end_frame = s[1]
 
+        #Out file path verification, we do this before but if one uses a seperate tool, this will kick in.
+        num = "%03d" % (section_index,)
+        if out_file_path is None:
+            out_file_path = os.path.join(rec_dir, "world_viz_" + num + "_.mp4")
+        else:
+            file_name_noext, file_extension = os.path.splitext(out_file_path)
+            file_name =  os.path.basename(file_name_noext)
+            file_directory = os.path.dirname(file_name_noext)
 
-    #Trim mark verification
-    #make sure the trim marks (start frame, endframe) make sense: We define them like python list slices,thus we can test them like such.
-    trimmed_timestamps = timestamps[start_frame:end_frame]
-    if len(trimmed_timestamps)==0:
-        logger.warn("Start and end frames are set such that no video will be exported.")
-        return False
+            if not file_extension:
+                file_extension = '.mp4'
+            if not file_directory:
+                file_directory = rec_dir
+            if not file_name:
+                file_name = 'world_viz' + '_' + num + '_' + file_extension
 
-    if start_frame == None:
-        start_frame = 0
+            file_path_to_write = os.path.expanduser(os.path.join(file_directory,file_name + '_' + num + '_' + file_extension))
 
-    #these two vars are shared with the lauching process and give a job length and progress report.
-    frames_to_export.value = len(trimmed_timestamps)
-    current_frame.value = 0
-    logger.debug("Will export from frame %s to frame %s. This means I will export %s frames."%(start_frame,start_frame+frames_to_export.value,frames_to_export.value))
-
-    #setup of writer
-    writer = AV_Writer(out_file_path)
-
-    cap.seek_to_frame(start_frame)
-
-    start_time = time()
-
-    g = Global_Container()
-    g.app = 'exporter'
-    g.capture = cap
-    g.rec_dir = rec_dir
-    g.user_dir = user_dir
-    g.rec_version = rec_version
-    g.timestamps = timestamps
+        if os.path.isfile(file_path_to_write):
+            logger.warning("Video out file already exists. I will overwrite!")
+            os.remove(file_path_to_write)
+        logger.debug("Saving Video to %s"%file_path_to_write)
 
 
-    # load pupil_positions, gaze_positions
-    pupil_data = load_object(pupil_data_path)
-    pupil_list = pupil_data['pupil_positions']
-    gaze_list = pupil_data['gaze_positions']
-
-    g.pupil_positions_by_frame = correlate_data(pupil_list,g.timestamps)
-    g.gaze_positions_by_frame = correlate_data(gaze_list,g.timestamps)
-    g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
-    g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
-
-    #add plugins
-    g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
-
-    while frames_to_export.value - current_frame.value > 0:
-
-        if should_terminate.value:
-            logger.warning("User aborted export. Exported %s frames to %s."%(current_frame.value,out_file_path))
-
-            #explicit release of VideoWriter
-            writer.close()
-            writer = None
+        #Trim mark verification
+        #make sure the trim marks (start frame, endframe) make sense: We define them like python list slices,thus we can test them like such.
+        trimmed_timestamps = timestamps[start_frame:end_frame]
+        if len(trimmed_timestamps)==0:
+            logger.warn("Start and end frames are set such that no video will be exported.")
             return False
 
-        try:
-            frame = cap.get_frame()
-        except EndofVideoFileError:
-            break
+        #these two vars are shared with the lauching process and give a job length and progress report.
+        frames_to_export.value = len(trimmed_timestamps)
+        current_frame.value = 0
+        logger.debug("Will export from frame %s to frame %s. This means I will export %s frames."%(start_frame,start_frame+frames_to_export.value,frames_to_export.value))
 
-        events = {}
-        #new positons and events
-        events['gaze_positions'] = g.gaze_positions_by_frame[frame.index]
-        events['pupil_positions'] = g.pupil_positions_by_frame[frame.index]
+        #setup of writer
+        writer = AV_Writer(file_path_to_write)
 
-        # allow each Plugin to do its work.
-        for p in g.plugins:
-            p.update(frame,events)
+        cap.seek_to_frame(start_frame)
 
-        writer.write_video_frame(frame)
-        current_frame.value +=1
+        start_time = time()
 
-    writer.close()
-    writer = None
+        g = Global_Container()
+        g.app = 'exporter'
+        g.capture = cap
+        g.rec_dir = rec_dir
+        g.user_dir = user_dir
+        g.rec_version = rec_version
+        g.timestamps = timestamps
 
-    duration = time()-start_time
-    effective_fps = float(current_frame.value)/duration
 
-    logger.info("Export done: Exported %s frames to %s. This took %s seconds. Exporter ran at %s frames per second"%(current_frame.value,out_file_path,duration,effective_fps))
+        # load pupil_positions, gaze_positions
+        pupil_data = load_object(pupil_data_path)
+        pupil_list = pupil_data['pupil_positions']
+        gaze_list = pupil_data['gaze_positions']
+
+        g.pupil_positions_by_frame = correlate_data(pupil_list,g.timestamps)
+        g.gaze_positions_by_frame = correlate_data(gaze_list,g.timestamps)
+        g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
+        g.fixations_by_frame = [[] for x in g.timestamps] #populated by the fixation detector plugin
+
+        #add plugins
+        g.plugins = Plugin_List(g,plugin_by_name,plugin_initializers)
+
+        while frames_to_export.value - current_frame.value > 0:
+
+            if should_terminate.value:
+                logger.warning("User aborted export. Stopped at section %s, exported %s frames of this section to %s."%(section_index,current_frame.value,file_path_to_write))
+
+                #explicit release of VideoWriter
+                writer.close()
+                writer = None
+                return False
+
+            try:
+                frame = cap.get_frame()
+            except EndofVideoFileError:
+                break
+
+            events = {}
+            #new positons and events
+            events['gaze_positions'] = g.gaze_positions_by_frame[frame.index]
+            events['pupil_positions'] = g.pupil_positions_by_frame[frame.index]
+
+            # allow each Plugin to do its work.
+            for p in g.plugins:
+                p.update(frame,events)
+
+            writer.write_video_frame(frame)
+            current_frame.value +=1
+
+        writer.close()
+        writer = None
+
+        duration = time()-start_time
+        effective_fps = float(current_frame.value)/duration
+        logger.info("Export of section %s done: Exported %s frames to %s. This took %s seconds. Exporter ran at %s frames per second"%(section_index,current_frame.value,file_path_to_write,duration,effective_fps))
+    
     return True

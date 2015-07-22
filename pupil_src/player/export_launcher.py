@@ -32,7 +32,7 @@ class Export_Process(Process):
     """small aditions to the process class"""
     def __init__(self, target,args):
         super(Export_Process, self).__init__(target=target,args=args)
-        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,self.out_file_path = args
+        self.should_terminate,self.frames_to_export,self.current_frame,_,_,_,_,_,self.out_file_path,_ = args
 
     def status(self):
         return self.current_frame.value
@@ -69,6 +69,8 @@ def avoid_overwrite(out_file_path):
         out_file_path += str(int(time.time())) + '.mp4'
     return out_file_path
 
+
+
 class Export_Launcher(Plugin):
     """docstring for Export_Launcher
     this plugin can export the video in a seperate process using exporter
@@ -98,13 +100,16 @@ class Export_Launcher(Plugin):
 
         self.menu.append(ui.Info_Text('Supply export video recording name. The export will be in the recording dir. If you give a path the export will end up there instead.'))
         self.menu.append(ui.Text_Input('rec_name',self,label='export name'))
-        self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar.'))
+        self.menu.append(ui.Info_Text('Use the trim marks in the seek bar to select the frame range to export.'))
         self.menu.append(ui.Text_Input('in_mark',getter=self.g_pool.trim_marks.get_string,setter=self.g_pool.trim_marks.set_string,label='frame range to export'))
         self.menu.append(ui.Button('new export',self.add_export))
-        self.export_all_sections
+        self.menu.append(ui.Info_Text('You can export all sections instead.'))
+        self.menu.append(ui.Button('export all sections',self.add_export_all_sections))
 
         for job in self.exports[::-1]:
             submenu = ui.Growing_Menu(job.out_file_path)
+            # todo 
+            # Need to update the max based on the current section frames
             progress_bar = ui.Slider('progress', getter=job.status, min=0, max=job.frames_to_export.value)
             progress_bar.read_only = True
             submenu.append(progress_bar)
@@ -117,7 +122,6 @@ class Export_Launcher(Plugin):
         if self.menu:
             self.g_pool.gui.remove(self.menu)
             self.menu = None
-
 
     def get_init_dict(self):
         return {}
@@ -143,7 +147,30 @@ class Export_Launcher(Plugin):
         plugins = self.g_pool.plugins.get_initializers()
 
         out_file_path = verify_out_file_path(self.rec_name,self.g_pool.rec_dir)
-        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame,end_frame,plugins,out_file_path))
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame,end_frame,plugins,out_file_path, None))
+        self.new_export = process
+
+    def add_export_all_sections(self):
+        forking_enable(0)
+
+        logger.debug("Adding new export.")
+        should_terminate = Value(c_bool,False)
+        frames_to_export  = Value(c_int,0)
+        current_frame = Value(c_int,0)
+
+        rec_dir = self.g_pool.rec_dir
+        user_dir = self.g_pool.user_dir
+
+        sections = self.g_pool.trim_marks.sections
+        frames = 0
+        for s in sections:
+            frames += s[1] - s[0] 
+        frames_to_export.value = frames
+
+        plugins = self.g_pool.plugins.get_initializers()
+
+        out_file_path = verify_out_file_path(self.rec_name,self.g_pool.rec_dir)
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,None,None,plugins,out_file_path,sections))
         self.new_export = process
 
     def launch_export(self, new_export):
@@ -157,7 +184,6 @@ class Export_Launcher(Plugin):
             self.launch_export(self.new_export)
             self.new_export = None
 
-
     def gl_display(self):
         pass
 
@@ -167,5 +193,3 @@ class Export_Launcher(Plugin):
         if you have a GUI or glfw window destroy it here.
         """
         self.deinit_gui()
-
-
