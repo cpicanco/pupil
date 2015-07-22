@@ -101,6 +101,7 @@ class Export_Launcher(Plugin):
         self.menu.append(ui.Info_Text('Select your export frame range using the trim marks in the seek bar.'))
         self.menu.append(ui.Text_Input('in_mark',getter=self.g_pool.trim_marks.get_string,setter=self.g_pool.trim_marks.set_string,label='frame range to export'))
         self.menu.append(ui.Button('new export',self.add_export))
+        self.export_all_sections
 
         for job in self.exports[::-1]:
             submenu = ui.Growing_Menu(job.out_file_path)
@@ -133,23 +134,17 @@ class Export_Launcher(Plugin):
         rec_dir = self.g_pool.rec_dir
         user_dir = self.g_pool.user_dir
 
-        # I am really not sure about this hack
-        # maybe a lot of threads could be created causing an overflow
-        for s in self.g_pool.trim_marks.sections:
-            section_index = self.g_pool.trim_marks.sections.index(s)
-            self.g_pool.trim_marks.focus(section_index)
+        start_frame = self.g_pool.trim_marks.in_mark
+        end_frame = self.g_pool.trim_marks.out_mark+1 #end_frame is exclusive
+        frames_to_export.value = end_frame-start_frame
 
-            start_frame = self.g_pool.trim_marks.in_mark
-            end_frame = self.g_pool.trim_marks.out_mark+1 #end_frame is exclusive
-            frames_to_export.value = end_frame-start_frame
+        # Here we make clones of every plugin that supports it.
+        # So it runs in the current config when we lauch the exporter.
+        plugins = self.g_pool.plugins.get_initializers()
 
-            # Here we make clones of every plugin that supports it.
-            # So it runs in the current config when we lauch the exporter.
-            plugins = self.g_pool.plugins.get_initializers()
-
-            out_file_path = verify_out_file_path(self.rec_name + str(section_index),self.g_pool.rec_dir)
-            process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame,end_frame,plugins,out_file_path))
-            self.new_export = process
+        out_file_path = verify_out_file_path(self.rec_name,self.g_pool.rec_dir)
+        process = Export_Process(target=export, args=(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,start_frame,end_frame,plugins,out_file_path))
+        self.new_export = process
 
     def launch_export(self, new_export):
         logger.debug("Starting export as new process %s" %new_export)
