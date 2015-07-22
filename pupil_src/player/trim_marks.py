@@ -203,21 +203,16 @@ class Trim_Marks(Plugin):
         y  = (y-self.padding)/(height-2*self.padding)
         return x,1-y
 
-    def load_sections(self, sections):
-        """
-        sections: list of [int(in_frame), int(out_frame)]
-        """
-        pass
-
     def save_current_sections(self, sections_set):
         pass
 
-    def get_init_dict(self):
-        return {'focus':self.focus,
-                'sections':self.sections}
+    # does not work dont know why
+    #def get_init_dict(self):
+    #    return {'focus':self.focus,
+    #            'sections':self.sections}
 
-    def clone(self):
-        return Trim_Marks(**self.get_init_dict())
+    #def clone(self):
+    #    return Trim_Marks(**self.get_init_dict())
 
     def gl_display(self):
         # still need appropriate padding and resizing

@@ -55,14 +55,15 @@ class Segmentation(Plugin):
         #self.current_frame_index = self.capture.get_frame_index()
         self.frame_count = self.capture.get_frame_count()
         self.frame_index = None
+        self.timestamps = g_pool.timestamps
 
         # initialize empty menu
         self.menu = None
-        self.session_type = 'A'
+        self.session_type = session_type
         self.mode = mode
         self.keep_create_order = keep_create_order
 
-        # initialize empty Plugin Data containers
+        # initialize empty containers (specific for my project)
         self.idx_begin_trial = []
         self.idx_end_limited_hold = []
         self.idx_first_response = []
@@ -71,17 +72,15 @@ class Segmentation(Plugin):
         self.pos_end_limited_hold = []
         self.pos_else = []
         
-        self.custom_events_dir = path.join(self.g_pool.rec_dir,'custom_events.npy')
+        self.custom_events_path = path.join(self.g_pool.rec_dir,'custom_events.npy')
         try:
-            self.custom_events = list(np.load(self.custom_events_dir))
+            self.custom_events = list(np.load(self.custom_events_path))
         except:
-            logger.warning("No custom events were found at: "+ self.custom_events_dir)
+            logger.warning("No custom events were found at: "+ self.custom_events_path)
             self.custom_events = custom_events
             if not self.custom_events:
                 logger.warning("No chached events were found.") 
  
-        # load data
-        self.timestamps = g_pool.timestamps
 
     def event_undo(self, arg):
         if self.custom_events:
@@ -98,7 +97,7 @@ class Segmentation(Plugin):
                     self.custom_events = sorted(self.custom_events, key=int)
 
     def save_custom_event(self):  
-        np.save(self.custom_events_dir,np.asarray(self.custom_events))
+        np.save(self.custom_events_path,np.asarray(self.custom_events))
 
     def auto_trim(self):
         # create sections and pass them to the trim_marks
