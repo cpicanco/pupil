@@ -489,8 +489,16 @@ class Offline_Marker_Detector(Plugin):
                     return
 
 
+<<<<<<< HEAD
             with open(os.path.join(metrics_dir,'surface_visibility.csv'),'wb') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+=======
+            for s in self.surfaces:
+                gaze_on_srf  = s.gaze_on_srf_in_section(section)
+                gaze_on_srf = set([gp['base']['timestamp'] for gp in gaze_on_srf])
+                not_on_any_srf -= gaze_on_srf
+                csv_writer.writerow( (s.name, len(gaze_on_srf)) )
+>>>>>>> e3b07e5150bc73899c893448a39c5c70d49ab31e
 
                 # surface visibility report
                 frame_count = len(self.g_pool.timestamps[section])
