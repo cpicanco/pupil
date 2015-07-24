@@ -34,11 +34,12 @@ class Offline_Reference_Surface(Reference_Surface):
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
 
-        self.heatmap_steps = {'x':1.,'y':1.}
         self.heatmap_blur = False
         self.heatmap_blur_gradation = .2
         self.heatmap = None
         self.heatmap_texture = None
+        self.gaze_cloud = None
+        self.gaze_cloud_texture =None
         self.metrics_gazecount = None
         self.metrics_texture = None
 
@@ -197,6 +198,28 @@ class Offline_Reference_Surface(Reference_Surface):
             glMatrixMode(GL_MODELVIEW)
             glPopMatrix()
 
+    def gl_display_gaze_cloud(self):
+        if self.gaze_cloud_texture and self.detected:
+
+            # cv uses 3x3 gl uses 4x4 tranformation matricies
+            m = cvmat_to_glmat(self.m_to_screen)
+
+            glMatrixMode(GL_PROJECTION)
+            glPushMatrix()
+            glLoadIdentity()
+            glOrtho(0, 1, 0, 1,-1,1) # gl coord convention
+
+            glMatrixMode(GL_MODELVIEW)
+            glPushMatrix()
+            #apply m  to our quad - this will stretch the quad such that the ref suface will span the window extends
+            glLoadMatrixf(m)
+
+            draw_named_texture(self.gaze_cloud_texture)
+
+            glMatrixMode(GL_PROJECTION)
+            glPopMatrix()
+            glMatrixMode(GL_MODELVIEW)
+            glPopMatrix()
 
     #### fns to draw surface in seperate window
     def gl_display_in_window(self,world_tex_id):
@@ -232,6 +255,9 @@ class Offline_Reference_Surface(Reference_Surface):
             if self.heatmap_texture:
                 draw_named_texture(self.heatmap_texture)
 
+            if self.gaze_cloud_texture:
+                draw_named_texture(self.gaze_cloud_texture)
+
             # now lets get recent pupil positions on this surface:
             for gp in self.gaze_on_srf:
                 draw_points_norm([gp['norm_pos']],color=RGBA(0.0,0.8,0.5,0.8), size=80)
@@ -246,7 +272,7 @@ class Offline_Reference_Surface(Reference_Surface):
             return
             
         # removing encapsulation
-        x_bin, y_bin = self.heatmap_steps['x'], self.heatmap_steps['y']
+        x_bin, y_bin = 1, 1
         x_size, y_size = self.real_world_size['x'], self.real_world_size['y']
 
         # create equidistant edges based on the user defined interval/size
@@ -291,7 +317,6 @@ class Offline_Reference_Surface(Reference_Surface):
             scale = 0
 
         # colormapping
-        
         hist = np.uint8(hist * (scale))
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
 
@@ -307,7 +332,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
         # here we approximate the image size trying to inventing as less data as possible
         # so resizing with a nearest-neighbor interpolation gives good results
-        self.filter_resize = True
+        self.filter_resize = False
         if self.filter_resize:
             inter = cv2.INTER_NEAREST
             dsize = (int(x_size), int(y_size)) 
@@ -317,6 +342,43 @@ class Offline_Reference_Surface(Reference_Surface):
         self.heatmap_texture = create_named_texture(self.heatmap.shape)
         update_named_texture(self.heatmap_texture, self.heatmap)
 
+    def generate_gaze_cloud(self,section):
+        if self.cache is None:
+            logger.warning('Surface cache is not build yet.')
+            return
+            
+        x_size, y_size = self.real_world_size['x'], self.real_world_size['y']
+
+        all_gaze = []
+        for frame_idx,c_e in enumerate(self.cache[section]):
+            if c_e:
+                for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']):
+                    all_gaze.append(gp['norm_pos'])
+
+        if not all_gaze:
+            logger.warning("No gaze data on surface for gaze cloud found.")
+            all_gaze.append((-1., -1.))
+
+        all_gaze = np.array(all_gaze)
+
+        img = np.zeros((y_size,x_size,4), np.uint8)
+        img += 255
+
+        all_gaze *= [x_size, y_size]
+        all_gaze_flipped = [[g[0], abs(g[1]-y_size)] for g in all_gaze]
+
+        for g in all_gaze_flipped:
+            cv2.circle(img, (int(g[0]),int(g[1])), 3, (0, 0, 0), 0)
+
+        alpha = img.copy()
+        alpha -= .5*255
+        alpha *= -1
+        img[:,:,3] = alpha[:,:,0]
+
+        self.gaze_cloud = img
+
+        self.gaze_cloud_texture = create_named_texture(self.gaze_cloud.shape)
+        update_named_texture(self.gaze_cloud_texture, self.gaze_cloud)
 
 
     def visible_count_in_section(self,section):

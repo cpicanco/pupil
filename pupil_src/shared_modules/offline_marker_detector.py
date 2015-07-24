@@ -181,12 +181,12 @@ class Offline_Marker_Detector(Plugin):
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Button('Close',self.close))
-        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Metrics"] ))
+        self.menu.append(ui.Selector('mode',self,label='Mode',selection=["Show Markers and Frames","Show marker IDs", "Surface edit mode","Show Heatmaps","Show Gaze Cloud","Show Metrics"] ))
         self.menu.append(ui.Info_Text('To see heatmap or surface metrics visualizations, click (re)-calculate gaze distributions. Set "X size" and "Y size" for each surface to see heatmap visualizations.'))
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statistics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
-        self.menu.append(ui.Button("Add screen segmentation", self.screen_segmentation))
+        self.menu.append(ui.Button("Screen segmentation", self.screen_segmentation))
         self.menu.append(ui.Info_Text('Heatmap Blur'))
         self.menu.append(ui.Switch('heatmap_blur', self, label='Blur'))
         self.menu.append(ui.Slider('heatmap_blur_gradation',self,min=0.01,step=0.01,max=1.0,label='Blur Gradation'))
@@ -198,9 +198,6 @@ class Offline_Marker_Detector(Plugin):
             s_menu.append(ui.Text_Input('name',s))
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
-            # heatmap steps
-            s_menu.append(ui.Text_Input('x',s.heatmap_steps, label='Heatmap X step'))
-            s_menu.append(ui.Text_Input('y',s.heatmap_steps, label='Heatmap Y step'))
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
@@ -208,7 +205,6 @@ class Offline_Marker_Detector(Plugin):
             remove_s = make_remove_s(idx)
             s_menu.append(ui.Button('remove',remove_s))
             self.menu.append(s_menu)
-
 
 
     def close(self):
@@ -262,8 +258,9 @@ class Offline_Marker_Detector(Plugin):
                 s.heatmap_blur = self.heatmap_blur
                 s.heatmap_blur_gradation = self.heatmap_blur_gradation
                 s.generate_heatmap(section)
+                s.generate_gaze_cloud(section)
 
-        # calc distirbution accross all surfaces.
+        # calc distribution across all surfaces.
         results = []
         for s in self.surfaces:
             gaze_on_srf  = s.gaze_on_srf_in_section(section)
@@ -390,11 +387,16 @@ class Offline_Marker_Detector(Plugin):
         if self.mode == "Show Heatmaps":
             for s in  self.surfaces:
                 s.gl_display_heatmap()
+
         if self.mode == "Show Metrics":
             #todo: draw a backdrop to represent the gaze that is not on any surface
             for s in self.surfaces:
                 #draw a quad on surface with false color of value.
                 s.gl_display_metrics()
+
+        if self.mode == "Show Gaze Cloud":
+            for s in self.surfaces:
+                s.gl_display_gaze_cloud()
 
     def gl_display_cache_bars(self):
         """
@@ -470,12 +472,11 @@ class Offline_Marker_Detector(Plugin):
         for s in self.g_pool.trim_marks.sections:
             self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(s);
             self.recalculate();
-            
+
             in_mark = s[0]
             out_mark = s[1]
 
             section = slice(in_mark,out_mark)
-
 
             metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
             logger.info("exporting metrics to %s"%metrics_dir)
@@ -489,16 +490,8 @@ class Offline_Marker_Detector(Plugin):
                     return
 
 
-<<<<<<< HEAD
             with open(os.path.join(metrics_dir,'surface_visibility.csv'),'wb') as csvfile:
                 csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-=======
-            for s in self.surfaces:
-                gaze_on_srf  = s.gaze_on_srf_in_section(section)
-                gaze_on_srf = set([gp['base']['timestamp'] for gp in gaze_on_srf])
-                not_on_any_srf -= gaze_on_srf
-                csv_writer.writerow( (s.name, len(gaze_on_srf)) )
->>>>>>> e3b07e5150bc73899c893448a39c5c70d49ab31e
 
                 # surface visibility report
                 frame_count = len(self.g_pool.timestamps[section])
@@ -528,7 +521,7 @@ class Offline_Marker_Detector(Plugin):
 
                 for s in self.surfaces:
                     gaze_on_srf  = s.gaze_on_srf_in_section(section)
-                    gaze_on_srf = set([gp['base']["timestamp"] for gp in gaze_on_srf])
+                    gaze_on_srf = set([gp['base']['timestamp'] for gp in gaze_on_srf])
                     not_on_any_srf -= gaze_on_srf
                     csv_writer.writerow( (s.name, len(gaze_on_srf)) )
 
@@ -584,7 +577,7 @@ class Offline_Marker_Detector(Plugin):
                                     csv_writer.writerow( (ts,idx,gp['base']['timestamp'],gp['norm_pos'][0],gp['norm_pos'][1],gp['norm_pos'][0]*s.real_world_size['x'],gp['norm_pos'][1]*s.real_world_size['y'],gp['on_srf']) )
 
 
-                # # save fixation on srf as csv.
+                # save fixation on srf as csv.
                 with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'wb') as csvfile:
                     csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
                     csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','x_scaled','y_scaled','on_srf'))
@@ -632,7 +625,6 @@ class Offline_Marker_Detector(Plugin):
                 # else:
                 #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
 
-
     def get_init_dict(self):
         return {'mode':self.mode}
 
@@ -653,4 +645,3 @@ class Offline_Marker_Detector(Plugin):
         for s in self.surfaces:
             s.close_window()
         self.deinit_gui()
-
