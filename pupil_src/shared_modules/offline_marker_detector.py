@@ -602,6 +602,11 @@ class Offline_Marker_Detector(Plugin):
                     logger.info("Saved Heatmap as .png file.")
                     cv2.imwrite(os.path.join(metrics_dir,'heatmap'+surface_name+'.png'),s.heatmap)
 
+                if s.gaze_cloud is not None:
+                    logger.info("Saved Gaze Cloud as .png file.")
+                    cv2.imwrite(os.path.join(metrics_dir,'gaze_cloud'+surface_name+'.png'),s.gaze_cloud)
+
+
 
             logger.info("Done exporting reference surface data.")
                 # if s.detected and self.img is not None:
