@@ -283,6 +283,7 @@ class Offline_Reference_Surface(Reference_Surface):
 
         for frame_idx,c_e in enumerate(self.cache[section]):
             if c_e:
+                frame_idx+=section.start
                 for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']):
                     all_gaze.append(gp['norm_pos'])
 
@@ -352,6 +353,7 @@ class Offline_Reference_Surface(Reference_Surface):
         all_gaze = []
         for frame_idx,c_e in enumerate(self.cache[section]):
             if c_e:
+                frame_idx+=section.start
                 for gp in self.gaze_on_srf_by_frame_idx(frame_idx,c_e['m_from_screen']):
                     all_gaze.append(gp['norm_pos'])
 

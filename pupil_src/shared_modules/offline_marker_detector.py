@@ -37,6 +37,7 @@ from plugin import Plugin
 #logging
 import logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 from square_marker_detect import detect_markers_robust, draw_markers,m_marker_to_screen
 from offline_reference_surface import Offline_Reference_Surface
@@ -173,11 +174,11 @@ class Offline_Marker_Detector(Plugin):
                 s.move_vertex(v_idx,np.array(new_pos))
                 s.cache = None
                 self.heatmap = None
+                self.gaze_cloud = None
 
         self.update_gui_markers()
       
     def update_gui_markers(self):
-        pass
         self.menu.elements[:] = []
         self.menu.append(ui.Info_Text('The offline marker tracker will look for markers in the entire video. By default it uses surfaces defined in capture. You can change and add more surfaces here.'))
         self.menu.append(ui.Button('Close',self.close))
@@ -468,7 +469,7 @@ class Offline_Marker_Detector(Plugin):
                 positions_of_name_id.csv
 
         """
-
+        digits = str(len(str(self.g_pool.capture.get_frame_count())))
         for s in self.g_pool.trim_marks.sections:
             self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(s);
             self.recalculate();
@@ -476,9 +477,14 @@ class Offline_Marker_Detector(Plugin):
             in_mark = s[0]
             out_mark = s[1]
 
+            digits = str(len(str(self.g_pool.capture.get_frame_count())))
+            placeholder = ["%0",digits,"d"]
+            in_mark_string = "".join(placeholder) % (in_mark)
+            out_mark_string = "".join(placeholder) % (out_mark)
+
             section = slice(in_mark,out_mark)
 
-            metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+            metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark_string,out_mark_string))
             logger.info("exporting metrics to %s"%metrics_dir)
             if os.path.isdir(metrics_dir):
                 logger.info("Will overwrite previous export for this section")
@@ -589,6 +595,8 @@ class Offline_Marker_Detector(Plugin):
                                     fixations_on_surface.append(f)
 
                     removed_dublicates = dict([(f['base']['id'],f) for f in fixations_on_surface]).values()
+                    logger.debug("fixation range to export %s - %s"%(removed_dublicates[0]['base']['id'],removed_dublicates[-1]['base']['id']))
+                    
                     for f_on_s in removed_dublicates:
                         f = f_on_s['base']
                         f_x,f_y = f_on_s['norm_pos']
