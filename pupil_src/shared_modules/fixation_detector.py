@@ -122,17 +122,17 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
 
             if dispersion < dispersion_threshold and gaze_data:
-                #so far all samples inside the threshold, lets add a new canditate
+                #so far all samples inside the threshold, lets add a new candidate
                 fixation_support += [gaze_data.pop(0)]
             else:
                 if gaze_data:
-                    #last added point will break dispersion threshold for current candite fixation. So we conclude sampling for this fixation
+                    #last added point will break dispersion threshold for current candidate fixation. So we conclude sampling for this fixation.
                     last_sample = fixation_support.pop(-1)
                 if fixation_support:
                     duration = fixation_support[-1]['timestamp'] - fixation_support[0]['timestamp']
                     if duration > duration_threshold and len(fixation_support) > sample_threshold:
-                        #long enough for fixation: we classifiy this fixation canditae as fixation
-                        #calulate charachter of fixation
+                        #long enough for fixation: we classifiy this fixation candidate as fixation
+                        #calculate character of fixation
                         fixation_centroid = sum([p['norm_pos'][0] for p in fixation_support])/len(fixation_support),sum([p['norm_pos'][1] for p in fixation_support])/len(fixation_support)
                         dispersion = max([dist_deg(fixation_centroid,p['norm_pos']) for p in fixation_support])
                         confidence = sum(g['confidence'] for g in fixation_support)/len(fixation_support)
@@ -192,6 +192,7 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             logger.warning('No fixations in this recording nothing to export')
             return
 
+<<<<<<< HEAD
         for s in self.g_pool.trim_marks.sections:
             self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(s);
             
@@ -237,6 +238,38 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                 csv_writer.writerow((''))
                 csv_writer.writerow(('fixation_count',len(fixations_in_section)))
                 logger.info("Created 'fixation_report.csv' file.")
+=======
+        fixations_in_section = chain(*self.g_pool.fixations_by_frame[slice(in_mark,out_mark)])
+        fixations_in_section = dict([(f['id'],f) for f in fixations_in_section]).values() #remove dublicates
+        fixations_in_section.sort(key=lambda f:f['id'])
+        metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+        logger.info("exporting metrics to %s"%metrics_dir)
+        if os.path.isdir(metrics_dir):
+            logger.info("Will overwrite previous export for this section.")
+        else:
+            try:
+                os.mkdir(metrics_dir)
+            except:
+                logger.warning("Could not make metrics dir %s!"%metrics_dir)
+                return
+
+
+        with open(os.path.join(metrics_dir,'fixations.csv'),'wb') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csv_writer.writerow(('id','start_timestamp','duration','start_frame','end_frame','norm_pos_x','norm_pos_y','dispersion','avg_pupil_size','confidence'))
+            for f in fixations_in_section:
+                csv_writer.writerow( ( f['id'],f['timestamp'],f['duration'],f['start_frame_index'],f['end_frame_index'],f['norm_pos'][0],f['norm_pos'][1],f['dispersion'],f['pupil_diameter'],f['confidence'] ) )
+            logger.info("Created 'fixations.csv' file.")
+
+        with open(os.path.join(metrics_dir,'fixation_report.csv'),'wb') as csvfile:
+            csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            csv_writer.writerow(('fixation classifier','Dispersion_Duration'))
+            csv_writer.writerow(('max_dispersion','%0.3f deg'%self.max_dispersion) )
+            csv_writer.writerow(('min_duration','%0.3f sec'%self.min_duration) )
+            csv_writer.writerow((''))
+            csv_writer.writerow(('fixation_count',len(fixations_in_section)))
+            logger.info("Created 'fixation_report.csv' file.")
+>>>>>>> fa9379ac299e1d4cb2fbb749af934873a1e06237
 
 
 
