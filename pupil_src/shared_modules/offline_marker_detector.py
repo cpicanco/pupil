@@ -582,7 +582,6 @@ class Offline_Marker_Detector(Plugin):
                                 for gp in s.gaze_on_srf_by_frame_idx(idx,ref_srf_data['m_from_screen']):
                                     csv_writer.writerow( (ts,idx,gp['base']['timestamp'],gp['norm_pos'][0],gp['norm_pos'][1],gp['norm_pos'][0]*s.real_world_size['x'],gp['norm_pos'][1]*s.real_world_size['y'],gp['on_srf']) )
 
-
                 # save fixation on srf as csv.
                 with open(os.path.join(metrics_dir,'fixations_on_surface'+surface_name+'.csv'),'wb') as csvfile:
                     csv_writer = csv.writer(csvfile, delimiter='\t',quotechar='|', quoting=csv.QUOTE_MINIMAL)

@@ -497,7 +497,54 @@ if __name__ == '__main__':
         rec_dir = os.path.expanduser(sys.argv[1])
     except:
         #for dev, supply hardcoded dir:
-        rec_dir = '/home/rafael/pupil-o/recordings/2015_05_27/cristiane/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_13/natan'
+        
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/cristiane/000'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/cristiane/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/cristiane/002'
+
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/marco/000'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/marco/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/marco/002'
+
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/thaiane/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/thaiane/002'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/thaiane/003'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_19/thaiane/004'
+
+
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/marco/000'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/marco/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/marco/002'
+
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/renan/003'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/renan/004'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/renan/005'
+
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_25/iguaracy/000'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_25/iguaracy/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_25/iguaracy/002'
+
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/oziele/000'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/oziele/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/oziele/002'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/oziele/003'
+
+        rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/acsa/000'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/acsa/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/acsa/002'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/acsa/003'
+        
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/priscila/000'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/priscila/001'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_26/priscila/002'
+
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/gabriel/006'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/gabriel/007'
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_20/gabriel/008'
+
+        # rec_dir = '/home/rafael/pupil-o/recordings/2015_05_27/cristiane/002'
+        #rec_dir = ''
         if os.path.isdir(rec_dir):
             logger.debug("Dev option: Using hardcoded data dir.")
         else:

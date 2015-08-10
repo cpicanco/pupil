@@ -54,7 +54,7 @@ class Show_Calibration(Plugin):
             self.close()
             return
 
-        self.calib_bounds =  cv2.convexHull(ref_pts)
+        self.calib_bounds = cv2.convexHull(ref_pts)
         # create a list [[px1,py1],[wx1,wy1],[px2,py2],[wx2,wy2]...] of outliers and inliers for gl_lines
         self.outliers = np.concatenate((cal_pt_cloud[~inlier_map][:,0:2],cal_pt_cloud[~inlier_map][:,2:4])).reshape(-1,2)
         self.inliers = np.concatenate((cal_pt_cloud[inlier_map][:,0:2],cal_pt_cloud[inlier_map][:,2:4]),axis=1).reshape(-1,2)

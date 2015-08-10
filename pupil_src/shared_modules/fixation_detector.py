@@ -20,6 +20,7 @@ from pyglui import ui
 from player_methods import transparent_circle
 # logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class Fixation_Detector(Plugin):
     """ base class for different fixation detection algorithms """
@@ -175,7 +176,6 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 
 
     def export_fixations(self):
-        #todo
         """
         between in and out mark
 
@@ -192,12 +192,21 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
             logger.warning('No fixations in this recording nothing to export')
             return
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
+=======
+        frame_count = self.g_pool.capture.get_frame_count()
+        digits = str(len(str(frame_count)))
+>>>>>>> Stashed changes
         for s in self.g_pool.trim_marks.sections:
             self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(s);
             
             in_mark = s[0]
             out_mark = s[1]
+
+            placeholder = ["%0",digits,"d"]
+            in_mark_string = "".join(placeholder) % (in_mark)
+            out_mark_string = "".join(placeholder) % (out_mark)
 
             for f in self.fixations:
                 if f['start_frame_index'] >= in_mark:
@@ -208,10 +217,9 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
                     last_fixation = f
                     break
 
-            fixations_in_section = self.fixations[first_fixation['id']:last_fixation['id']+1]
+            fixations_in_section = self.fixations[first_fixation['id']:last_fixation['id']+1]        
 
-
-            metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark,out_mark))
+            metrics_dir = os.path.join(self.g_pool.rec_dir,"metrics_%s-%s"%(in_mark_string,out_mark_string))
             logger.info("exporting metrics to %s"%metrics_dir)
             if os.path.isdir(metrics_dir):
                 logger.info("Will overwrite previous export for this section.")
@@ -285,7 +293,6 @@ class Dispersion_Duration_Fixation_Detector(Fixation_Detector):
 
     def close(self):
         self.alive = False
-
 
     def get_init_dict(self):
         return {'max_dispersion': self.max_dispersion, 'min_duration':self.min_duration, 'h_fov':self.h_fov, 'v_fov': self.v_fov,'show_fixations':self.show_fixations}
