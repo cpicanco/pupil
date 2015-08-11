@@ -470,12 +470,13 @@ class Offline_Marker_Detector(Plugin):
 
         """
         digits = str(len(str(self.g_pool.capture.get_frame_count())))
-        for s in self.g_pool.trim_marks.sections:
-            self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(s);
+        current_frame_index = self.g_pool.capture.get_frame_index()
+        for sec in self.g_pool.trim_marks.sections:
+            self.g_pool.trim_marks.focus = self.g_pool.trim_marks.sections.index(sec);
             self.recalculate();
 
-            in_mark = s[0]
-            out_mark = s[1]
+            in_mark = sec[0]
+            out_mark = sec[1]
 
             digits = str(len(str(self.g_pool.capture.get_frame_count())))
             placeholder = ["%0",digits,"d"]
@@ -613,20 +614,28 @@ class Offline_Marker_Detector(Plugin):
                     cv2.imwrite(os.path.join(metrics_dir,'gaze_cloud'+surface_name+'.png'),s.gaze_cloud)
 
                 # lets save out the current surface image found in video
-                if s.detected and self.img is not None:
+                seek_pos = in_mark + ((out_mark - in_mark)/2)
+                self.g_pool.capture.seek_to_frame(seek_pos)
+                new_frame = self.g_pool.capture.get_frame()
+                frame = new_frame.copy()
+                self.update(frame, None)
+                if s.detected and frame.img is not None:
                     #here we get the verts of the surface quad in norm_coords
                     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
                     screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
-                    #now we convert to image pixel coods
+                    
+                    #now we convert to image pixel coords
                     screen_space[:,1] = 1-screen_space[:,1]
-                    screen_space[:,1] *= self.img.shape[0]
-                    screen_space[:,0] *= self.img.shape[1]
+                    screen_space[:,1] *= frame.img.shape[0]
+                    screen_space[:,0] *= frame.img.shape[1]
                     s_0,s_1 = s.real_world_size['x'], s.real_world_size['y'] 
+                    
                     #now we need to flip vertically again by setting the mapped_space verts accordingly.
                     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
                     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
+                    
                     #here we do the actual perspactive transform of the image.
-                    srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
+                    srf_in_video = cv2.warpPerspective(frame.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
                     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
                     logger.info("Saved current image as .png file.")
                 else:
@@ -645,7 +654,8 @@ class Offline_Marker_Detector(Plugin):
                 #src2 = cv2.imread(os.path.join(metrics_dir,'heatmap'+surface_name+'.png'))
                 #dst = cv2.addWeighted(src1, .9, src2, .1, 0.0);                
                 #cv2.imwrite(os.path.join(metrics_dir,'surface-heatmap'+surface_name+'.png'),dst)
-                              
+            
+            self.g_pool.capture.seek_to_frame(current_frame_index)
             logger.info("Done exporting reference surface data.")
 
     def get_init_dict(self):
