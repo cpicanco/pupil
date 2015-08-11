@@ -594,8 +594,7 @@ class Offline_Marker_Detector(Plugin):
                                     fixations_on_surface.append(f)
 
                     removed_dublicates = dict([(f['base']['id'],f) for f in fixations_on_surface]).values()
-                    logger.debug("fixation range to export %s - %s"%(removed_dublicates[0]['base']['id'],removed_dublicates[-1]['base']['id']))
-                    
+
                     for f_on_s in removed_dublicates:
                         f = f_on_s['base']
                         f_x,f_y = f_on_s['norm_pos']
@@ -613,29 +612,41 @@ class Offline_Marker_Detector(Plugin):
                     logger.info("Saved Gaze Cloud as .png file.")
                     cv2.imwrite(os.path.join(metrics_dir,'gaze_cloud'+surface_name+'.png'),s.gaze_cloud)
 
+                # lets save out the current surface image found in video
+                if s.detected and self.img is not None:
+                    #here we get the verts of the surface quad in norm_coords
+                    mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
+                    screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
+                    #now we convert to image pixel coods
+                    screen_space[:,1] = 1-screen_space[:,1]
+                    screen_space[:,1] *= self.img.shape[0]
+                    screen_space[:,0] *= self.img.shape[1]
+                    s_0,s_1 = s.real_world_size['x'], s.real_world_size['y'] 
+                    #now we need to flip vertically again by setting the mapped_space verts accordingly.
+                    mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
+                    M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
+                    #here we do the actual perspactive transform of the image.
+                    srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
+                    cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
+                    logger.info("Saved current image as .png file.")
+                else:
+                    logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
 
+                # lets create alternative versions of the surfaces *.pngs
+                src1 = cv2.imread(os.path.join(metrics_dir,'surface'+surface_name+'.png'))
+                for g in s.output_data['gaze']:
+                    cv2.circle(src1, (int(g[0]),int(g[1])), 3, (0, 0, 0), 0)
 
+                for c in s.output_data['kmeans']:
+                    cv2.circle(src1, (int(c[0]),int(c[1])), 5, (0, 0, 255), -1)
+                cv2.imwrite(os.path.join(metrics_dir,'surface-gaze_cloud'+surface_name+'.png'),src1)
+
+                np.savetxt(os.path.join(metrics_dir,'surface-gaze_cloud'+surface_name+'.txt'), s.output_data['gaze'])
+                #src2 = cv2.imread(os.path.join(metrics_dir,'heatmap'+surface_name+'.png'))
+                #dst = cv2.addWeighted(src1, .9, src2, .1, 0.0);                
+                #cv2.imwrite(os.path.join(metrics_dir,'surface-heatmap'+surface_name+'.png'),dst)
+                              
             logger.info("Done exporting reference surface data.")
-                # if s.detected and self.img is not None:
-                #     #let save out the current surface image found in video
-
-                #     #here we get the verts of the surface quad in norm_coords
-                #     mapped_space_one = np.array(((0,0),(1,0),(1,1),(0,1)),dtype=np.float32).reshape(-1,1,2)
-                #     screen_space = cv2.perspectiveTransform(mapped_space_one,s.m_to_screen).reshape(-1,2)
-                #     #now we convert to image pixel coods
-                #     screen_space[:,1] = 1-screen_space[:,1]
-                #     screen_space[:,1] *= self.img.shape[0]
-                #     screen_space[:,0] *= self.img.shape[1]
-                #     s_0,s_1 = s.real_world_size
-                #     #no we need to flip vertically again by setting the mapped_space verts accordingly.
-                #     mapped_space_scaled = np.array(((0,s_1),(s_0,s_1),(s_0,0),(0,0)),dtype=np.float32)
-                #     M = cv2.getPerspectiveTransform(screen_space,mapped_space_scaled)
-                #     #here we do the actual perspactive transform of the image.
-                #     srf_in_video = cv2.warpPerspective(self.img,M, (int(s.real_world_size['x']),int(s.real_world_size['y'])) )
-                #     cv2.imwrite(os.path.join(metrics_dir,'surface'+surface_name+'.png'),srf_in_video)
-                #     logger.info("Saved current image as .png file.")
-                # else:
-                #     logger.info("'%s' is not currently visible. Seek to appropriate frame and repeat this command."%s.name)
 
     def get_init_dict(self):
         return {'mode':self.mode}

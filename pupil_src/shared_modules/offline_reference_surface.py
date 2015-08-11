@@ -43,6 +43,8 @@ class Offline_Reference_Surface(Reference_Surface):
         self.metrics_gazecount = None
         self.metrics_texture = None
 
+        self.output_data = {}
+
     #cache fn for offline marker
     def locate_from_cache(self,frame_idx):
         if self.cache == None:
@@ -366,11 +368,23 @@ class Offline_Reference_Surface(Reference_Surface):
         img = np.zeros((y_size,x_size,4), np.uint8)
         img += 255
 
+        # plot gaze
         all_gaze *= [x_size, y_size]
         all_gaze_flipped = [[g[0], abs(g[1]-y_size)] for g in all_gaze]
 
         for g in all_gaze_flipped:
             cv2.circle(img, (int(g[0]),int(g[1])), 3, (0, 0, 0), 0)
+    
+        # plot kmeans centers
+        all_gaze_float = np.float32(all_gaze_flipped)
+
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+        _,_,centers = cv2.kmeans(all_gaze_float,2,criteria,10,cv2.KMEANS_RANDOM_CENTERS)
+        for c in centers:
+            print c
+            cv2.circle(img, (int(c[0]),int(c[1])), 5, (0, 0, 255), -1)
+
+        self.output_data = {'gaze':all_gaze_flipped,'kmeans':centers}
 
         alpha = img.copy()
         alpha -= .5*255
