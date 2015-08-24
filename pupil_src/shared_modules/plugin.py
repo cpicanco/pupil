@@ -7,9 +7,10 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import os,sys
 import logging
 logger = logging.getLogger(__name__)
+import importlib
 
 
 '''
@@ -80,7 +81,7 @@ class Plugin(object):
     def update(self,frame,events):
         """
         gets called once every frame
-        if you plan to update the image data, note that this will affect all plugins executed after you.
+        if you plan to update data inplace, note that this will affect all plugins executed after you.
         Use self.order to deal with this appropriately
         """
         pass
@@ -109,6 +110,14 @@ class Plugin(object):
         gets called when the user clicks in the window screen
         """
         pass
+
+    @property
+    def this_class(self):
+        '''
+        this instance's class
+        '''
+        return self.__class__
+
 
     @property
     def class_name(self):
@@ -175,10 +184,9 @@ class Plugin_List(object):
 
         for initializer in plugin_initializers:
             name, args = initializer
-            logger.info("Loading plugin: %s with settings %s"%(name, args))
+            logger.debug("Loading plugin: %s with settings %s"%(name, args))
             try:
-                p = plugin_by_name[name](g_pool,**args)
-                self.add(p)
+                self.add(plugin_by_name[name],args)
             except (AttributeError,TypeError,KeyError) as e:
                 logger.warning("Plugin '%s' failed to load from settings file. Because of Error:%s" %(name,e))
 
@@ -189,29 +197,29 @@ class Plugin_List(object):
     def __str__(self):
         return 'Plugin List: %s'%self._plugins
 
-    def add(self,new_plugin):
+    def add(self,new_plugin,args={}):
         '''
         add a plugin instance to the list.
-
         '''
         if new_plugin.uniqueness == 'by_base_class':
             for p in self._plugins:
-                if p.base_class_name == new_plugin.base_class_name:
-                    logger.debug("Plugin %s of base class %s will be replaced by %s."%(p,p.base_class_name,new_plugin))
+                if p.base_class == new_plugin.__bases__[-1]:
+                    logger.debug("Plugin %s of base class %s will be replaced by %s."%(p,p.base_class_name,new_plugin.__name__))
                     p.alive = False
                     self.clean()
 
         elif new_plugin.uniqueness == 'by_class':
             for p in self._plugins:
-                if p.class_name == new_plugin.class_name:
-                    logger.warning("Plugin %s is already loaded and flagged as unique. Did not add it."%new_plugin)
+                if p.this_class == new_plugin:
+                    logger.warning("Plugin '%s' is already loaded . Did not add it."%new_plugin.__name__)
                     return
 
-        logger.debug("Loaded Plugin: %s"%new_plugin)
-        self._plugins.append(new_plugin)
+        plugin_instance = new_plugin(self.g_pool,**args)
+        self._plugins.append(plugin_instance)
         self._plugins.sort(key=lambda p: p.order)
-        if self.g_pool.app in ("capture","player") and new_plugin.alive: #make sure the plugin does not want to be gone already
-            new_plugin.init_gui()
+        if self.g_pool.app in ("capture","player") and plugin_instance.alive: #make sure the plugin does not want to be gone already
+            plugin_instance.init_gui()
+            logger.info("Loaded: %s"%new_plugin.__name__)
         self.clean()
 
 
@@ -235,3 +243,24 @@ class Plugin_List(object):
                 # any object without a get_init_dict method will throw this exception.
                 pass
         return initializers
+
+
+
+def import_runtime_plugins(plugin_dir):
+    runtime_plugins = []
+    if os.path.isdir(plugin_dir):
+        sys.path.append(plugin_dir)
+        for d in os.listdir(plugin_dir):
+            logger.debug('Scanning: %s'%d)
+            try:
+                d =  d.rsplit(".", 1 )[ 0 ]
+                module = importlib.import_module(d)
+                logger.debug('Imported: %s'%module)
+                for name in dir(module):
+                    member = getattr(module, name)
+                    if isinstance(member, type) and issubclass(member, Plugin) and member.__name__ != 'Plugin':
+                        logger.info('Added: %s'%member)
+                        runtime_plugins.append(member)
+            except:
+                pass
+    return runtime_plugins

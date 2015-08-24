@@ -142,6 +142,7 @@ class Trim_Marks(Plugin):
             self.out_mark = x
             self.text[1] = str(self.out_mark)
 
+
     def on_click(self,img_pos,button,action):
         """
         gets called when the user clicks in the window screen
@@ -168,8 +169,11 @@ class Trim_Marks(Plugin):
                     self.drag_out=True
 
         elif action == GLFW_RELEASE:
-            self.drag_out = False
-            self.drag_in = False
+            if self.drag_out or self.drag_in:
+                logger.info("Section: "+self.get_string())
+                self.drag_out = False
+                self.drag_in = False
+
 
             # would be great to expand the click area horizontally for big sections
             for s in self.sections:
