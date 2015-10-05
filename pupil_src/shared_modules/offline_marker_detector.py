@@ -129,13 +129,30 @@ class Offline_Marker_Detector(Marker_Detector):
         self.menu.append(ui.Button("(Re)-calculate gaze distributions", self.recalculate))
         self.menu.append(ui.Button("Export gaze and surface data", self.save_surface_statsics_to_file))
         self.menu.append(ui.Button("Add surface", lambda:self.add_surface('_')))
+        
+        # filter to be applyed to all surface heatmaps
+        self.menu.append(ui.Info_Text('Filters'))
+        self.menu.append(ui.Switch('filter_blur', self, label='Blur'))
+        self.menu.append(ui.Slider('filter_blur_detail',self,min=0.01,step=0.01,max=1.0,label='Blur Gradation'))
         for s in self.surfaces:
             idx = self.surfaces.index(s)
             s_menu = ui.Growing_Menu("Surface %s"%idx)
             s_menu.collapsed=True
             s_menu.append(ui.Text_Input('name',s))
+<<<<<<< HEAD
             s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size'))
             s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size'))
+=======
+            #     self._bar.add_var("%s_markers"%i,create_string_buffer(512), getter=s.atb_marker_status,group=str(i),label='found/registered markers' )
+            s_menu.append(ui.Info_Text('You can estimate the surface size based on the its pixels on screen. It can help you to give a proper scale to the on screen data. It requires that you seek to a frame with the camera angle at 90 degrees from the surface. Then choose "Edit surface", click on the "Estimate Size" button. Check the result with the "recalculate" button'))
+            s_menu.append(ui.Button('Estimate Size', s.estimate_size))
+            s_menu.append(ui.Text_Input('x',s.real_world_size,label='X size', getter=s.estimate_x_size))
+            s_menu.append(ui.Text_Input('y',s.real_world_size,label='Y size', getter=s.estimate_y_size))
+            # heatmap intervals
+            s_menu.append(ui.Text_Input('x',s.heatmap_bins, label='X bin'))
+            s_menu.append(ui.Text_Input('y',s.heatmap_bins, label='Y bin'))
+
+>>>>>>> 9682fc795f0ff8b2f6fe581c524bd7e6d2222e47
             s_menu.append(ui.Button('Open Debug Window',s.open_close_window))
             #closure to encapsulate idx
             def make_remove_s(i):
@@ -165,6 +182,8 @@ class Offline_Marker_Detector(Marker_Detector):
         # calc heatmaps
         for s in self.surfaces:
             if s.defined:
+                s.filter_blur = self.filter_blur
+                s.heatmap_detail = self.filter_blur_detail
                 s.generate_heatmap(section)
 
         # calc distirbution accross all surfaces.
@@ -189,8 +208,13 @@ class Offline_Marker_Detector(Marker_Detector):
         for s,c_map in zip(self.surfaces,results_c_maps):
             heatmap = np.ones((1,1,4),dtype=np.uint8)*125
             heatmap[:,:,:3] = c_map
+<<<<<<< HEAD
             s.metrics_texture = Named_Texture()
             s.metrics_texture.update_from_ndarray(heatmap)
+=======
+            s.metrics_texture = create_named_texture(heatmap.shape)
+            update_named_texture(s.metrics_texture,heatmap)
+>>>>>>> 9682fc795f0ff8b2f6fe581c524bd7e6d2222e47
 
 
     def update(self,frame,events):
@@ -206,6 +230,7 @@ class Offline_Marker_Detector(Marker_Detector):
         for s in self.surfaces:
             if not s.locate_from_cache(frame.index):
                 s.locate(self.markers)
+                s.img_shape = self.img_shape
             if s.detected:
                 pass
                 # events.append({'type':'marker_ref_surface','name':s.name,'uid':s.uid,'m_to_screen':s.m_to_screen,'m_from_screen':s.m_from_screen, 'timestamp':frame.timestamp,'gaze_on_srf':s.gaze_on_srf})
