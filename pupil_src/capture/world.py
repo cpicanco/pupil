@@ -185,6 +185,26 @@ def world(g_pool,cap_src,cap_size):
     glfwMakeContextCurrent(main_window)
     cygl.utils.init()
 
+    # Register callbacks main_window
+    glfwSetWindowSizeCallback(main_window,on_resize)
+    glfwSetWindowCloseCallback(main_window,on_close)
+    glfwSetWindowIconifyCallback(main_window,on_iconify)
+    glfwSetKeyCallback(main_window,on_key)
+    glfwSetCharCallback(main_window,on_char)
+    glfwSetMouseButtonCallback(main_window,on_button)
+    glfwSetCursorPosCallback(main_window,on_pos)
+    glfwSetScrollCallback(main_window,on_scroll)
+
+    # gl_state settings
+    basic_gl_setup()
+    g_pool.image_tex = create_named_texture()
+    update_named_texture(g_pool.image_tex,frame.img)
+
+    # refresh speed settings
+    glfwSwapInterval(0)
+    glfwSetWindowPos(main_window,window_position_default[0],window_position_default[1])
+
+
     #setup GUI
     g_pool.gui = ui.UI()
     g_pool.gui.scale = session_settings.get('gui_scale',1)

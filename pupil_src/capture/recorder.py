@@ -8,8 +8,9 @@
 ----------------------------------------------------------------------------------~(*)
 '''
 
-import os, sys, platform, errno
+import os, sys, platform
 import getpass
+import cv2
 from pyglui import ui
 import numpy as np
 from scipy.interpolate import UnivariateSpline
@@ -345,7 +346,7 @@ class Recorder(Plugin):
                 if platform.system() == "Windows":
                     username = os.environ["USERNAME"]
                     sysname, nodename, release, version, machine, _ = platform.uname()
-                else:
+                else:   
                     username = getpass.getuser()
                     try:
                         sysname, nodename, release, version, machine = os.uname()
