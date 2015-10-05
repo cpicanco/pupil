@@ -7,14 +7,14 @@
  License details are in the file license.txt, distributed as part of this software.
 ----------------------------------------------------------------------------------~(*)
 '''
-
+import math
 import numpy as np
 import cv2
 from gl_utils import cvmat_to_glmat,clear_gl_screen
 from glfw import *
 from OpenGL.GL import *
 from pyglui.cygl.utils import create_named_texture,update_named_texture, draw_named_texture, draw_points_norm, RGBA
-from methods import GetAnglesPolyline,normalize
+from methods import GetAnglesPolyline, normalize, denormalize
 from cache_list import Cache_List
 
 #ctypes import for atb_vars:
@@ -34,7 +34,10 @@ class Offline_Reference_Surface(Reference_Surface):
         self.gaze_positions_by_frame = gaze_positions_by_frame
         self.cache = None
         self.gaze_on_srf = [] # points on surface for realtime feedback display
-
+        self.x_dist = 1
+        self.y_dist = 1
+        self.heatmap_bins = {'x':1,'y':1}
+        self.filter_blur = False
         self.heatmap_detail = .2
         self.heatmap = None
         self.heatmap_texture = None
@@ -233,21 +236,58 @@ class Offline_Reference_Surface(Reference_Surface):
             glfwSwapBuffers(self._window)
             glfwMakeContextCurrent(active_window)
 
+    def get_surface_vertices(self):
+        """
+            Returns 4 denormalized vertices (vx,vy) and its corresponding indexes (i).
 
+            3 . . 2
+            .     .
+            .     .
+            0 . . 1
+        """
+        if self.detected:
+            denormalized_vertices = []
+            surf_verts = ((0.,0.),(1.,0.),(1.,1.),(0.,1.))
+            for (vx,vy),i in zip(self.ref_surface_to_img(np.array(surf_verts)),range(4)):
+                vx,vy = denormalize((vx,vy),(self.img_shape[1],self.img_shape[0]),flip_y=True)
+                denormalized_vertices.append([(vx,vy),i])
+        return denormalized_vertices
+
+    def estimate_size(self):
+        if self.detected:
+            for (vx, vy), i in self.get_surface_vertices(): 
+                if i == 0: # bottomleft
+                    x0, y0 = vx, vy
+                if i == 1: # bottomright
+                    x1, y1 = vx, vy
+                if i == 3: # topleft
+                    x3, y3 = vx, vy
+
+            self.x_dist = math.hypot(x1 - x0, y1 - y0) 
+            self.y_dist = math.hypot(x3 - x0, y3 - y0) 
+
+            self.estimate_x_size()
+            self.estimate_y_size()
+
+    def estimate_x_size(self):
+        return srt(self.x_dist) 
+
+    def estimate_y_size(self):
+        return srt(self.y_dist) 
+        
     def generate_heatmap(self,section):
-
         if self.cache is None:
             logger.warning('Surface cache is not build yet.')
             return
+            
+        # removing encapsulation
+        x_bin, y_bin = self.heatmap_bins['x'], self.heatmap_bins['y']
+        x_size, y_size = self.real_world_size['x'], self.real_world_size['y']
 
+        # create equidistant edges based on the user defined interval/size
+        x_bin = [x for x in xrange(0,int(x_size + 1), x_bin)]
+        y_bin = [y for y in xrange(0,int(y_size + 1), y_bin)]
 
-        x,y = self.real_world_size['x'],self.real_world_size['y']
-        x = max(1,int(x))
-        y = max(1,int(y))
-
-        filter_size = (int(self.heatmap_detail * x)/2)*2 +1
-        std_dev = filter_size /6.
-        self.heatmap = np.ones((y,x,4),dtype=np.uint8)
         all_gaze = []
 
         for c_e in self.cache[section]:
@@ -257,35 +297,60 @@ class Offline_Reference_Surface(Reference_Surface):
 
         if not all_gaze:
             logger.warning("No gaze data on surface for heatmap found.")
-            all_gaze.append((-1.,-1.))
+            all_gaze.append((-1., -1.))
+
         all_gaze = np.array(all_gaze)
-        all_gaze *= [self.real_world_size['x'],self.real_world_size['y']]
-        hist,xedge,yedge = np.histogram2d(all_gaze[:,0], all_gaze[:,1],
-                                            bins=[x,y],
-                                            range=[[0, self.real_world_size['x']], [0,self.real_world_size['y']]],
-                                            normed=False,
-                                            weights=None)
+        all_gaze *= [x_size, y_size]
+        print all_gaze
+        hist, xedge, yedge = np.histogram2d(all_gaze[:, 0], all_gaze[:, 1],
+                                            bins = (x_bin, y_bin),
+                                            # range = [[0, x_size], [0, y_size]],
+                                            normed = False,
+                                            weights = None)
 
-
+        # numpy.histogram2d does not follow the Cartesian convention
         hist = np.rot90(hist)
 
-        #smoothing..
-        hist = cv2.GaussianBlur(hist, (filter_size,filter_size),std_dev)
+        # smoothing/ rounded interpolation?
+        if self.filter_blur:
+            filter_size = (int(self.heatmap_detail * len(x_bin)/2)*2 +1)
+            std_dev = filter_size /6.
+
+            hist = cv2.GaussianBlur(hist, (filter_size, filter_size), std_dev)
+
+        # scale convertion necessary for the colormapping
         maxval = np.amax(hist)
         if maxval:
             scale = 255./maxval
         else:
             scale = 0
 
-        hist = np.uint8( hist*(scale) )
-
-        #colormapping
+        # colormapping
+        hist = np.uint8(hist * (scale))
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
 
-        self.heatmap[:,:,:3] = c_map
-        self.heatmap[:,:,3] = 125
+        # we need a 4 channel image to apply transparency
+        x, y, channels = c_map.shape
+        self.heatmap = np.ones((x, y, 4), dtype = np.uint8)
+
+        # lets assign the color channels
+        self.heatmap[:, :, :3] = c_map
+
+        # alpha blend/transparency
+        self.heatmap[:, :, 3] = 125
+
+        self.filter_resize = True
+        # here we approximate the image size trying to inventing as less data as possible
+        # so resizing with a nearest-neighbor interpolation gives good results
+
+        if self.filter_resize:
+            inter = cv2.INTER_NEAREST
+            dsize = (int(x_size), int(y_size)) 
+            self.heatmap = cv2.resize(src=self.heatmap, dsize=dsize, fx=0, fy=0, interpolation=inter)
+
+        # texturing
         self.heatmap_texture = create_named_texture(self.heatmap.shape)
-        update_named_texture(self.heatmap_texture,self.heatmap)
+        update_named_texture(self.heatmap_texture, self.heatmap)
 
 
     def visible_count_in_section(self,section):
