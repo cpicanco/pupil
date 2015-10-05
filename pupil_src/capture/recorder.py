@@ -9,6 +9,7 @@
 '''
 
 import os, sys, platform
+import getpass
 import cv2
 from pyglui import ui
 import numpy as np
@@ -303,8 +304,8 @@ class Recorder(Plugin):
                 if platform.system() == "Windows":
                     username = os.environ["USERNAME"]
                     sysname, nodename, release, version, machine, _ = platform.uname()
-                else:
-                    username = os.getlogin()
+                else:   
+                    username = getpass.getuser()
                     try:
                         sysname, nodename, release, version, machine = os.uname()
                     except:
