@@ -13,13 +13,8 @@ import cv2
 from gl_utils import cvmat_to_glmat,clear_gl_screen
 from glfw import *
 from OpenGL.GL import *
-<<<<<<< HEAD
-from pyglui.cygl.utils import Named_Texture, draw_points_norm, RGBA
-from methods import GetAnglesPolyline,normalize
-=======
 from pyglui.cygl.utils import create_named_texture,update_named_texture, draw_named_texture, draw_points_norm, RGBA
 from methods import GetAnglesPolyline, normalize, denormalize
->>>>>>> 9682fc795f0ff8b2f6fe581c524bd7e6d2222e47
 from cache_list import Cache_List
 
 #ctypes import for atb_vars:
@@ -339,12 +334,6 @@ class Offline_Reference_Surface(Reference_Surface):
         hist = np.uint8(hist * (scale))
         c_map = cv2.applyColorMap(hist, cv2.COLORMAP_JET)
 
-<<<<<<< HEAD
-        self.heatmap[:,:,:3] = c_map
-        self.heatmap[:,:,3] = 125
-        self.heatmap_texture = Named_Texture()
-        self.heatmap_texture.update_from_ndarray(self.heatmap)
-=======
         # we need a 4 channel image to apply transparency
         x, y, channels = c_map.shape
         self.heatmap = np.ones((x, y, 4), dtype = np.uint8)
@@ -365,9 +354,8 @@ class Offline_Reference_Surface(Reference_Surface):
             self.heatmap = cv2.resize(src=self.heatmap, dsize=dsize, fx=0, fy=0, interpolation=inter)
 
         # texturing
-        self.heatmap_texture = create_named_texture(self.heatmap.shape)
+        self.heatmap_texture = create_named_texture()
         update_named_texture(self.heatmap_texture, self.heatmap)
->>>>>>> 9682fc795f0ff8b2f6fe581c524bd7e6d2222e47
 
 
     def visible_count_in_section(self,section):

@@ -208,14 +208,9 @@ class Offline_Marker_Detector(Marker_Detector):
         for s,c_map in zip(self.surfaces,results_c_maps):
             heatmap = np.ones((1,1,4),dtype=np.uint8)*125
             heatmap[:,:,:3] = c_map
-<<<<<<< HEAD
-            s.metrics_texture = Named_Texture()
-            s.metrics_texture.update_from_ndarray(heatmap)
-=======
-            s.metrics_texture = create_named_texture(heatmap.shape)
-            update_named_texture(s.metrics_texture,heatmap)
->>>>>>> 9682fc795f0ff8b2f6fe581c524bd7e6d2222e47
 
+            s.metrics_texture = create_named_texture()
+            update_named_texture(s.metrics_texture,heatmap)
 
     def update(self,frame,events):
         self.img = frame.img
