@@ -21,7 +21,7 @@ from time import time
 from glob import glob
 import cv2
 import numpy as np
-from video_capture import autoCreateCapture,EndofVideoFileError,FakeCapture
+from video_capture import File_Capture,EndofVideoFileError
 from player_methods import correlate_data,update_recording_0v4_to_current,update_recording_0v3_to_current
 from methods import denormalize
 from version_utils import VersionFormat, read_rec_version, get_version
@@ -89,10 +89,8 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
 
     timestamps = np.load(timestamps_path)
 
-    cap = autoCreateCapture(video_path,timestamps=timestamps_path)
-    if isinstance(cap,FakeCapture):
-        logger.error("could not start capture.")
-        return
+    cap = File_Capture(video_path,timestamps=timestamps)
+
 
     # test for defined sections
     if sections:
@@ -143,7 +141,8 @@ def export(should_terminate,frames_to_export,current_frame, rec_dir,user_dir,sta
         logger.debug("Will export from frame %s to frame %s. This means I will export %s frames."%(start_frame,start_frame+frames_to_export.value,frames_to_export.value))
 
         #setup of writer
-        writer = AV_Writer(file_path_to_write)
+        #writer = AV_Writer(file_path_to_write)
+        writer = AV_Writer(file_path_to_write, fps=cap.frame_rate,use_timestamps=True)
 
         cap.seek_to_frame(start_frame)
 
